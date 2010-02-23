@@ -37,7 +37,7 @@ start_link() ->
 %% Callbacks
 %%====================================================================
 init(Parent) ->
-    %% process_flag(trap_exit, true),
+    process_flag(trap_exit, true),
 
     Self = self(),
     ?D_REGISTER(?SERVER, Self), %% not needed
@@ -70,8 +70,13 @@ loop(#state{pkts=Pkt, bytes=Bytes} = State) ->
 		    loop(State)
 	    end;
 
+	{'EXIT', _Pid, _Reason} ->
+	    ?D_TERMINATE(_Reason),
+	    ?D_YOUPI,
+	    epcap:stop();
+
 	_Other ->
-	    %% ?D_UNHANDLED(_Other),
+	    ?D_UNHANDLED(_Other),
 	    loop(State)
     end.
 
