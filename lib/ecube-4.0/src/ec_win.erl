@@ -87,7 +87,7 @@ handle_info({set_title, T}, State) ->
     {noreply, State};
 
 handle_info({'EXIT', _Pid, _Reason}, State) ->
-    ?D_F("process ~p died: ~p, exiting~n", [_Pid, _Reason]),
+    ?D_F("process ~p died: ~p, exiting", [_Pid, _Reason]),
     {stop, normal, State}.
 
 
