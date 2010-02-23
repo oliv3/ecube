@@ -19,16 +19,12 @@
 %% API
 -export([start_link/0]).
 
-%% Plugin API
--export([collect/2]). %%, create/4]).
-
 %% Callbacks
--export([init/1, system_continue/3]).
+-export([init/1]).
 
 -define(SERVER, ?MODULE).
 
--record(state, {}).
--record(collect, {pkts=0, bytes=0}).
+-record(state, {pkts=0, bytes=0}).
 
 %%====================================================================
 %% API
@@ -43,44 +39,19 @@ start_link() ->
 init(Parent) ->
     %% process_flag(trap_exit, true),
 
-    %% Sert a rien
-    Env = ec_gui:get_env(),
-    wx:set_env(Env),
-    
     Self = self(),
     ?D_REGISTER(?SERVER, Self), %% not needed
-    %% ec_gui:register(Self),
-    Collector = spawn_link(?MODULE, collect, [self(), #collect{}]),
-    proc_lib:init_ack(Parent, {ok, Self}),
-    Debug = sys:debug_options([]),
+    %% Debug = sys:debug_options([]),
 
     %% XXX code:*dir
     %% FIXME: interface 'any' -> crash proto(0)
     PcapOpts = [{interface, ?IF}, {filter, "tcp or udp"}, {chroot, "priv/tmp"}, {snaplen, 68}],
-    epcap:start(Collector, PcapOpts),
-    loop(Parent, Debug, #state{}).
+    epcap:start(Self, PcapOpts),
+    proc_lib:init_ack(Parent, {ok, Self}),
+    loop(#state{}).
 
 
-%% XXX du coup ca sert a rien
-loop(Parent, Debug, #state{} = State) ->
-    receive
-	{system, From, Request} ->
-	    ?D_F("code v1 system message: From ~p Request: ~p", [From, Request]),
-            sys:handle_system_msg(Request, From, Parent, ?MODULE, Debug, State);
-	
-	_Other ->
-	    ?D_UNHANDLED(_Other),
-	    loop(Parent, Debug, State)
-    end.
-
-
-system_continue(Parent, Debug, State) ->
-    ?D_F("code v1 system_continue(~p, ~p, ~p)", [Parent, Debug, State]),
-    loop(Parent, Debug, State).
-
-
-%% XXX ducoup Parent sert a rien
-collect(Parent, #collect{pkts=Pkt, bytes=Bytes} = State) ->
+loop(#state{pkts=Pkt, bytes=Bytes} = State) ->
     receive	
 	[{pkthdr, _Info}, {packet, Packet}] = _P ->
 	    case epcap_net:decapsulate(Packet) of
@@ -92,16 +63,16 @@ collect(Parent, #collect{pkts=Pkt, bytes=Bytes} = State) ->
 		    %% error_logger:info_msg("~p packets / ~p bytes~n", [NPkt, NBytes]),
 		    %% ?D_F("create whatever= ~p ~p ~p ~p", [IP#ipv4.saddr, port(sport, Hdr), IP#ipv4.daddr, port(dport, Hdr)]),
 		    create(Saddr, port(sport, Hdr), Daddr, port(dport, Hdr)),
-		    collect(Parent, #collect{pkts=NPkt, bytes=NBytes});
+		    loop(#state{pkts=NPkt, bytes=NBytes});
 		
 		_Other ->
 		    ?D_UNHANDLED(_Other),
-		    collect(Parent, State)
+		    loop(State)
 	    end;
 
 	_Other ->
 	    %% ?D_UNHANDLED(_Other),
-	    collect(Parent, State)
+	    loop(State)
     end.
 
 
@@ -142,12 +113,12 @@ to_ascii(Packet) ->
 
 
 -define(MAXP, 2#11111111111).
+-define(PAD, 1:1).
 
 
 rescale(Val) ->
     (Val / ?MAXP) * 2.0 - 1.0.
 
--define(PAD, 1:1).
 
 create({A0,B0,C0,D0}=_SrcIP, SrcPort, {A1,B1,C1,D1}=_DstIP, DstPort) ->
     %% ?D_F("create(~p:~p => ~p:~p)", [_SrcIP, SrcPort, _DstIP, DstPort]),
