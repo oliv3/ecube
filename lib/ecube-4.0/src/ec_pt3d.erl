@@ -234,22 +234,22 @@ rec() ->
 rec(Port, Bin) ->
     receive
 	{Port, {data, Data}} ->
-	    %% ?D_F("got ~p bytes of data~n", [byte_size(Data)]),
+	    %% ?D_F("got ~p bytes of data", [byte_size(Data)]),
 	    NData = concat_binary([Bin, Data]),
 	    Left = split(NData),
 	    rec(Port, Left);
 	
 	_Other ->
-	    ?D_F("REC processes unhandled ~p~n", [_Other]),
+	    ?D_F("REC processes unhandled ~p", [_Other]),
 	    rec(Port, Bin)
     end.
    
 
 split(Bin) when byte_size(Bin) >= ?BINARY_CHUNKSIZE ->
     {Chunk, Rest} = split_binary(Bin, ?BINARY_CHUNKSIZE),
-    %% ?D_F("Chunk: ~p~n Rest=~p~n", [size(Chunk), size(Rest)]),
+    %% ?D_F("Chunk: ~p~n Rest=~p", [size(Chunk), size(Rest)]),
     ?GEN ! {chunk, Chunk},
-    %% ?D_F("Sleeping ~p ms~n", [?SLEEP]),
+    %% ?D_F("Sleeping ~p ms", [?SLEEP]),
     timer:sleep(?SLEEP),
     split(Rest);
 split(Left) ->
@@ -266,7 +266,7 @@ gen(OldChunk) ->
 	    gen(OldChunk);
 
 	_Other ->
-	    ?D_F("GEN processes unhandled ~p~n", [_Other]),
+	    ?D_F("GEN processes unhandled ~p", [_Other]),
 	    gen(OldChunk)
     end.
 
@@ -342,7 +342,7 @@ mkspline([X,Y,Z,R,G,B|Tail], AccC, AccB) ->
 mkspline(_Rest, AccC, AccB) ->
     %% {AccC, concat_binary(AccB)}.
     Res = {AccC, concat_binary(AccB)},
-    %% ?D_F("mkspline: ~p~n", [Res]),
+    %% ?D_F("mkspline: ~p", [Res]),
     Res.
 
 
@@ -351,9 +351,9 @@ draw2([], _Step) ->
 draw2([Col|Colors], Step) ->
     gl:color3fv(Col),
     %% gl:color3fv({1.0,1.0,1.0}),
-    %% ?D_F("Color: ~p~n", [Col]),
+    %% ?D_F("Color: ~p", [Col]),
     NewStep = draw3(?RESOLUTION, Step),
-    %% ?D_F("NewStep: ~p~n", [NewStep]),
+    %% ?D_F("NewStep: ~p", [NewStep]),
     draw2(Colors, NewStep).
 
 draw3(0, Step) ->
