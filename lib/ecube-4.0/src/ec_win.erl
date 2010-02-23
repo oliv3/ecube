@@ -1,3 +1,8 @@
+%%%-------------------------------------------------------------------
+%%% File    : ec_win.erl
+%%% Author  : Olivier <olivier@biniou.info>
+%%% Description : Main window
+%%%-------------------------------------------------------------------
 -module(ec_win).
 -author('olivier@biniou.info').
 -vsn("1.0").

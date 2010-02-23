@@ -43,14 +43,14 @@ get(N) ->
 init([]) ->
     process_flag(trap_exit, true),
     N = ec:get_env(n),
-    %% ?D_F("init: N= ~p~n", [N]),
+    %% ?D_F("init: N= ~p", [N]),
     _BSize = ec:get_env(biniou_size),
     if
 	N >= 1 andalso N =< 6 ->
-	    ?D_F("running ~p binious at ~p~n", [N, _BSize]),
+	    ?D_F("running ~p binious at ~p", [N, _BSize]),
 	    Binious = launch(N),
 	    _Pids = [B#biniou.pid || B <- tuple_to_list(Binious)],
-	    ?D_F("binious= ~p~n", [_Pids]),
+	    ?D_F("binious= ~p", [_Pids]),
 	    {ok, Binious};
 	true ->
 	    {stop, {error, badarg}}
@@ -74,7 +74,7 @@ handle_call({get, FaceNo}, _From, Binious) ->
 
 
 handle_info({'EXIT', Pid, _Reason}, State) ->
-    ?D_F("got EXIT from ~p with reason: ~p~n", [Pid, _Reason]),
+    ?D_F("got EXIT from ~p with reason: ~p", [Pid, _Reason]),
     NewState = restart(Pid, State),
     {noreply, NewState}.
 
@@ -82,7 +82,7 @@ handle_info({'EXIT', Pid, _Reason}, State) ->
 terminate(_Reason, Binious) ->
     ?D_TERMINATE(_Reason),
     [ec_biniou:stop(B#biniou.pid) || B <- tuple_to_list(Binious)],
-    ?D_F("stopped binious~n", []).
+    ?D_F("stopped binious", []).
 
 
 %%====================================================================
@@ -109,7 +109,7 @@ process(N, <<Vsn:32/integer, V:8/integer, Width:16/integer, Height:16/integer,
     set_volume(N, V),
     #img{w=Width, h=Height, data=Data, pf=PF, pt=PT};
 process(_N, _Other) ->
-    ?D_F("process/2 got martian data, leaving undefined.~n", []),
+    ?D_F("process/2 got martian data, leaving undefined", []),
     undefined.
 
 
