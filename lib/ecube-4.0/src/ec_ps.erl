@@ -148,13 +148,13 @@ go(#part{ttl=TTL, born=Born, last=Last} = P) ->
     Age = timer:now_diff(Now, Born),
     if
 	Age > TTL ->
-	    %% ?D_F("~p died~n", [self()]),
+	    %% ?D_F("~p died", [self()]),
 	    dead;
 	
 	true ->
 	    Elapsed = timer:now_diff(Now, Last),
 	    ElapsedS = Elapsed / ?MICRO, %% in secs
-	    %% ?D_F("~p Age= ~p Elapsed= ~p (~p secs)~n", [self(), Age, Elapsed, ElapsedS]),
+	    %% ?D_F("~p Age= ~p Elapsed= ~p (~p secs)", [self(), Age, Elapsed, ElapsedS]),
 	    {NPos, NVel} = move(P, ElapsedS),
 	    P#part{pos=NPos, vel=NVel, last=Now}
     end.
@@ -164,11 +164,11 @@ draw([]) ->
     [];
 draw(Particles) when is_list(Particles) ->
     N = length(Particles),
-    %% ?D_F("~p particles ~p processes~n", [N, length(processes())]),
+    %% ?D_F("~p particles ~p processes", [N, length(processes())]),
     Ref = make_ref(),
     [P ! {self(), Ref, go} || P <- Particles],
     %% draw_particles(N).
-    %% ?D_F("Drawing particles: ~p~n", [Particles]),
+    %% ?D_F("Drawing particles: ~p", [Particles]),
     %% safe_draw_particles(N, Ref, Particles).
     draw_particles(N, Ref).
 
@@ -186,7 +186,7 @@ draw_particles(N, Ref, Acc) ->
     NM1 = N-1,
     receive
 	{Ref, _Pid, dead} ->
-	    %% ?D_F("particle ~p died~n", [_Pid]),
+	    %% ?D_F("particle ~p died", [_Pid]),
 	    draw_particles(NM1, Ref, Acc);
 
 	{Ref, Pid, #part{pos=Pos, col=Col}} ->
@@ -196,7 +196,7 @@ draw_particles(N, Ref, Acc) ->
 
 
 render_particle(Pos, Col) ->
-    %% ?D_F("Pos= ~p~n", [Pos]),
+    %% ?D_F("Pos= ~p", [Pos]),
     gl:color3ubv(Col),
     gl:vertex3fv(Pos).
 
