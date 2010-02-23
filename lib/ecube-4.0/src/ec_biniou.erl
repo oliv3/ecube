@@ -1,3 +1,8 @@
+%%%-------------------------------------------------------------------
+%%% File    : ec_biniou.erl
+%%% Author  : Olivier <olivier@biniou.info>
+%%% Description : Biniou plugin
+%%%-------------------------------------------------------------------
 -module(ec_biniou).
 -author('olivier@biniou.info').
 -vsn("3.0").
@@ -27,7 +32,7 @@ args(Id) ->
 		I ->
 		    check_input(I)
 	    end,
-    ?D_F("input= ~s~n", [Input]),
+    ?D_F("input= ~s", [Input]),
     {W, H} = ec:get_env(biniou_size),
     lists:flatten([" -i ", Input, " -o ", ?OUTPUT
 		   " -x ", ?I2L(W), " -y ", ?I2L(H),
@@ -37,7 +42,7 @@ args(Id) ->
 
 
 start(Id) ->
-    ?D_F("new biniou id: ~p~n", [Id]),
+    ?D_F("new biniou id: ~p", [Id]),
     process_flag(trap_exit, true),
     Cmd = os:find_executable(?BINIOU) ++ args(Id),
     Env = {env, [{"BINIOU_ERLANG_PROTO", "3"}]},
@@ -72,7 +77,7 @@ loop(#state{frame=Frame, port=Port} = State) ->
 		    loop(State);
 
 		{'EXIT', Port, _Reason} ->
-		    ?D_F("~p exiting with reason: ~p~n", [Port, _Reason]);
+		    ?D_F("~p exiting with reason: ~p", [Port, _Reason]);
 
 		stop ->
 		    stop_biniou(Port);
@@ -92,22 +97,10 @@ stop_biniou(Port) ->
     port_close(Port).
 
 
-%% is_input(A) when is_atom(A) ->
-%%     is_input(atom_to_list(A));
-%% is_input(I) when is_list(I) ->
-%%     lists:member(I, ?INPUTS).
-
-
-%% to_list(A) when is_atom(A) ->
-%%     atom_to_list(A);
-%% to_list(L) when is_list(L) ->
-%%     L.
-
-
 check_input(A) when is_atom(A) ->
     check_input(atom_to_list(A));
 check_input(L) ->
-    ?D_F("Check input ~p~n", [L]),
+    ?D_F("Check input ~p", [L]),
     case lists:member(L, ?INPUTS) of
 	true ->
 	    L;

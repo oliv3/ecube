@@ -144,7 +144,7 @@ code_change(?V1 = _OldVsn, State, _Extra) ->
     NewState1 = set2(?O_TEXT, NewState0),
     NewState2 = unset2(?O_SPIN, NewState1),
     NewState3 = set2(?O_MUTE, NewState2),
-    ?D_F("changed state to ~p~n", [NewState3]),
+    ?D_F("changed state to ~p", [NewState3]),
     {ok, NewState3};
 
 code_change({down, ?V1} = _OldVsn, State, _Extra) ->
@@ -153,7 +153,7 @@ code_change({down, ?V1} = _OldVsn, State, _Extra) ->
     NewState1 = unset2(?O_TEXT, NewState0),
     NewState2 = set2(?O_SPIN, NewState1),
     NewState3 = unset2(?O_MUTE, NewState2),
-    ?D_F("changed state to ~p~n", [NewState3]),
+    ?D_F("changed state to ~p", [NewState3]),
     {ok, NewState3}.
 
 

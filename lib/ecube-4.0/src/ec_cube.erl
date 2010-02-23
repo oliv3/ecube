@@ -1,3 +1,8 @@
+%%%-------------------------------------------------------------------
+%%% File    : ec_cube.erl
+%%% Author  : Olivier <olivier@biniou.info>
+%%% Description : Cube plugin
+%%%-------------------------------------------------------------------
 -module(ec_cube).
 -author('olivier@biniou.info').
 -vsn("3.0").
