@@ -50,13 +50,10 @@ init([]) ->
 	    permanent, ?TIMEOUT, worker, [ec_pcap]},
 
     PT3D = {ec_pt3d, {ec_pt3d, start_link, []},
-	    %% permanent, ?TIMEOUT, worker, [ec_pt3d]},
-	    permanent, brutal_kill, worker, [ec_pt3d]},
+	    permanent, ?TIMEOUT, worker, [ec_pt3d]},
 
     PS = {ec_ps, {ec_ps, start_link, []},
 	  permanent, ?TIMEOUT, worker, [ec_ps]},
-    %% permanent, brutal_kill, worker, [ec_pt3d]},
 
-%%    {ok, {{one_for_one, 10, 1}, [CfgSrv, VolSrv, TexSrv, GUI, Demo, OSD, PCAP]}}.
+    %% {ok, {{one_for_one, 10, 1}, [CfgSrv, VolSrv, TexSrv, GUI, PS, Demo, OSD, PCAP]}}.
     {ok, {{one_for_one, 10, 1}, [CfgSrv, VolSrv, TexSrv, GUI, PS, Demo, OSD, PT3D]}}.
-%% {ok, {{one_for_one, 10, 1}, [CfgSrv, VolSrv, TexSrv, GUI, Demo, OSD, M3D]}}.
