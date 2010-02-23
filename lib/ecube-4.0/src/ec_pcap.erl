@@ -72,7 +72,6 @@ loop(#state{pkts=Pkt, bytes=Bytes} = State) ->
 
 	{'EXIT', _Pid, _Reason} ->
 	    ?D_TERMINATE(_Reason),
-	    ?D_YOUPI,
 	    epcap:stop();
 
 	_Other ->
