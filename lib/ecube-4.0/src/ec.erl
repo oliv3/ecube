@@ -1,3 +1,8 @@
+%%%-------------------------------------------------------------------
+%%% File    : ec.erl
+%%% Author  : Olivier <olivier@biniou.info>
+%%% Description : misc. utilities
+%%%-------------------------------------------------------------------
 -module(ec).
 -author('olivier@biniou.info').
 -vsn("1.0").
