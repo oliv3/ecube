@@ -56,7 +56,7 @@ loop(Parent, Debug, #state{tex_size=TexSize, splash=undefined, texs=undefined} =
 	    loop(Parent, Debug, NewState);
 
         {system, From, Request} ->
-	    ?D_F("code v3 system message(1): From ~p Request: ~p~n", [From, Request]),
+	    ?D_F("code v3 system message(1): From ~p Request: ~p", [From, Request]),
             sys:handle_system_msg(Request, From, Parent, ?MODULE, Debug, State);
 
 	_Other ->
@@ -73,11 +73,11 @@ loop(Parent, Debug, #state{tex_size=TexSize, splash=Splash, texs=Texs} = State) 
 	    loop(Parent, Debug, State#state{texs=NewTexs});
 
 	{'EXIT', _Pid, Reason} ->
-	    ?D_F("got EXIT from ~p with reason: ~p~n", [_Pid, Reason]),
+	    ?D_F("got EXIT from ~p with reason: ~p", [_Pid, Reason]),
 	    exit(Reason);
 
         {system, From, Request} ->
-	    ?D_F("code v3 system message(2): From ~p Request: ~p~n", [From, Request]),
+	    ?D_F("code v3 system message(2): From ~p Request: ~p", [From, Request]),
             sys:handle_system_msg(Request, From, Parent, ?MODULE, Debug, State);
 
 	_Other ->
@@ -87,15 +87,15 @@ loop(Parent, Debug, #state{tex_size=TexSize, splash=Splash, texs=Texs} = State) 
 
 
 system_code_change(_State, _Module, ?V1 = _OldVsn, _Extra) ->
-    ?D_F("code v3 system_code_change from ~p (~p, ~p, ~p)~n", [_OldVsn, _State, _Module, _Extra]),
+    ?D_F("code v3 system_code_change from ~p (~p, ~p, ~p)", [_OldVsn, _State, _Module, _Extra]),
     {ok, #state{}};
 system_code_change(_State, _Module, {down, ?V1} = _OldVsn, _Extra) ->
-    ?D_F("code v3 system_code_change to ~p (~p, ~p, ~p)~n", [_OldVsn, _State, _Module, _Extra]),
+    ?D_F("code v3 system_code_change to ~p (~p, ~p, ~p)", [_OldVsn, _State, _Module, _Extra]),
     {ok, undefined}.
 
 
 system_continue(Parent, Debug, State) ->
-    ?D_F("code v3 system_continue(~p, ~p, ~p)~n", [Parent, Debug, State]),
+    ?D_F("code v3 system_continue(~p, ~p, ~p)", [Parent, Debug, State]),
     loop(Parent, Debug, State).
 
 %%====================================================================
