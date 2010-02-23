@@ -86,21 +86,21 @@ init(Parent) ->
 %% proc_lib callbacks
 %%====================================================================
 system_code_change(#state{frame=Frame, gl=GL, size=Size, plugins=Plugins} = _State, _Module, ?V1 = _OldVsn, _Extra) ->
-    ?D_F("code v3 system_code_change from ~p (~p, ~p, ~p)~n", [_OldVsn, _State, _Module, _Extra]),
+    ?D_F("code v3 system_code_change from ~p (~p, ~p, ~p)", [_OldVsn, _State, _Module, _Extra]),
     NewState = #state3{frame=Frame, gl=GL, size=Size, plugins=Plugins, textures=ets()},
     ec_win:set_title(),
     {ok, NewState};
 
 system_code_change(#state3{frame=Frame, gl=GL, size=Size, plugins=Plugins} = _State, _Module, {down, ?V1} = _OldVsn, _Extra) ->
-    ?D_F("code v3 system_code_change to ~p (~p, ~p, ~p)~n", [_OldVsn, _State, _Module, _Extra]),
+    ?D_F("code v3 system_code_change to ~p (~p, ~p, ~p)", [_OldVsn, _State, _Module, _Extra]),
     NewState = #state{frame=Frame, gl=GL, size=Size, plugins=Plugins},
     ec_win:set_title(),
-    ?D_F("code v3 system_code_change to 1.0: NewState= ~p~n", [NewState]),
+    ?D_F("code v3 system_code_change to 1.0: NewState= ~p", [NewState]),
     {ok, NewState}.
 
 
 system_continue(Parent, Debug, State) ->
-    ?D_F("code v3 system_continue(~p, ~p, ~p)~n", [Parent, Debug, State]),
+    ?D_F("code v3 system_continue(~p, ~p, ~p)", [Parent, Debug, State]),
     loop(Parent, Debug, State).
 
 
@@ -137,7 +137,7 @@ loop(Parent, Debug, #state3{ifps=IFPS, gl=GL, textures=Texs} = State) ->
 	    Records = ets:lookup(Texs, Pid),
 	    ets:delete(Texs, Pid),
 	    Tids = [Tid || {_Pid, Tid} <- Records],
-	    ?D_F("freeing textures owned by pid ~p: ~p~n", [Pid, Tids]),
+	    ?D_F("freeing textures owned by pid ~p: ~p", [Pid, Tids]),
 	    wxGLCanvas:setCurrent(GL),
 	    gl:deleteTextures(Tids),
 	    loop(Parent, Debug, State);
@@ -148,7 +148,7 @@ loop(Parent, Debug, #state3{ifps=IFPS, gl=GL, textures=Texs} = State) ->
 	    loop(Parent, Debug, NewState);
 
 	{'EXIT', Pid, Reason} ->
-	    ?D_F("got EXIT from ~p with reason: ~p~n", [Pid, Reason]),
+	    ?D_F("got EXIT from ~p with reason: ~p", [Pid, Reason]),
             case unregister(Pid, State) of
 		{ok, NewState} ->
 		    loop(Parent, Debug, NewState);
@@ -156,12 +156,12 @@ loop(Parent, Debug, #state3{ifps=IFPS, gl=GL, textures=Texs} = State) ->
 		{false, State} ->
                     wxFrame:destroy(State#state3.frame),
                     wx:destroy(),
-                    ?D_F("wxWidgets destroyed~n", []),
+                    ?D_F("wxWidgets destroyed", []),
                     exit(Reason)
             end;
 
         {system, From, Request} ->
-	    ?D_F("code v3 system message: From ~p Request: ~p~n", [From, Request]),
+	    ?D_F("code v3 system message: From ~p Request: ~p", [From, Request]),
             sys:handle_system_msg(Request, From, Parent, ?MODULE, Debug, State);
 	
 	_Other ->
@@ -190,7 +190,7 @@ draw2(State, [Pid|Pids], Acc) ->
             draw2(State, Pids, [Pid|Acc]);
 
         {'EXIT', Pid, _Reason} ->
-            ?D_F("plugin ~p crashed, reason: ~p~n", [Pid, _Reason]),
+            ?D_F("plugin ~p crashed, reason: ~p", [Pid, _Reason]),
             {ok, NewState} = unregister(Pid, State),
             draw2(NewState, Pids, Acc)
     end.

@@ -65,7 +65,7 @@ init(Parent) ->
 loop(Parent, Debug, #state{} = State) ->
     receive
 	{system, From, Request} ->
-	    ?D_F("code v1 system message: From ~p Request: ~p~n", [From, Request]),
+	    ?D_F("code v1 system message: From ~p Request: ~p", [From, Request]),
             sys:handle_system_msg(Request, From, Parent, ?MODULE, Debug, State);
 	
 	_Other ->
@@ -75,7 +75,7 @@ loop(Parent, Debug, #state{} = State) ->
 
 
 system_continue(Parent, Debug, State) ->
-    ?D_F("code v1 system_continue(~p, ~p, ~p)~n", [Parent, Debug, State]),
+    ?D_F("code v1 system_continue(~p, ~p, ~p)", [Parent, Debug, State]),
     loop(Parent, Debug, State).
 
 
@@ -86,11 +86,11 @@ collect(Parent, #collect{pkts=Pkt, bytes=Bytes} = State) ->
 	    case epcap_net:decapsulate(Packet) of
 		[_Ether, #ipv4{saddr=Saddr, daddr=Daddr}, Hdr, Payload] ->
 		    %% out(Res),
-		    %% ?D_F("Res= ~p~n", [Res]),
+		    %% ?D_F("Res= ~p", [Res]),
 		    NBytes = Bytes + byte_size(Payload),
 		    NPkt = Pkt + 1,
 		    %% error_logger:info_msg("~p packets / ~p bytes~n", [NPkt, NBytes]),
-		    %% ?D_F("create whatever= ~p ~p ~p ~p~n", [IP#ipv4.saddr, port(sport, Hdr), IP#ipv4.daddr, port(dport, Hdr)]),
+		    %% ?D_F("create whatever= ~p ~p ~p ~p", [IP#ipv4.saddr, port(sport, Hdr), IP#ipv4.daddr, port(dport, Hdr)]),
 		    create(Saddr, port(sport, Hdr), Daddr, port(dport, Hdr)),
 		    collect(Parent, #collect{pkts=NPkt, bytes=NBytes});
 		
@@ -150,7 +150,7 @@ rescale(Val) ->
 -define(PAD, 1:1).
 
 create({A0,B0,C0,D0}=_SrcIP, SrcPort, {A1,B1,C1,D1}=_DstIP, DstPort) ->
-    %% ?D_F("create(~p:~p => ~p:~p)~n", [_SrcIP, SrcPort, _DstIP, DstPort]),
+    %% ?D_F("create(~p:~p => ~p:~p)", [_SrcIP, SrcPort, _DstIP, DstPort]),
     PadSrc = <<A0,B0,C0,D0,?PAD>>,
     PadDst = <<A1,B1,C1,D1,?PAD>>,
     <<Xs0:11,Ys0:11,Zs0:11>> = PadSrc,

@@ -1,3 +1,8 @@
+%%%-------------------------------------------------------------------
+%%% File    : ec_gl.erl
+%%% Author  : Olivier <olivier@biniou.info>
+%%% Description : OpenGL widget
+%%%-------------------------------------------------------------------
 -module(ec_gl).
 -author('olivier@biniou.info').
 -vsn("1.0").

@@ -66,7 +66,7 @@ loop(Parent, Debug, #state{collector=Collector} = State) ->
 	    loop(Parent, Debug, State);
 	
 	{system, From, Request} ->
-	    ?D_F("code v1 system message(1): From ~p Request: ~p~n", [From, Request]),
+	    ?D_F("code v1 system message(1): From ~p Request: ~p", [From, Request]),
             sys:handle_system_msg(Request, From, Parent, ?MODULE, Debug, State);
 	
 	_Other ->
@@ -76,7 +76,7 @@ loop(Parent, Debug, #state{collector=Collector} = State) ->
 
 
 system_continue(Parent, Debug, State) ->
-    ?D_F("code v1 system_continue(~p, ~p, ~p)~n", [Parent, Debug, State]),
+    ?D_F("code v1 system_continue(~p, ~p, ~p)", [Parent, Debug, State]),
     loop(Parent, Debug, State).
 
 
@@ -85,9 +85,9 @@ draw(CollectorPid) ->
     CollectorPid ! {self(), Ref, get},
     receive
 	{Ref, LastPoint, List} -> %% later, a GLlist ?
-	    %% ?D_F("LastPoint= ~p~n", [LastPoint]),
+	    %% ?D_F("LastPoint= ~p", [LastPoint]),
 	    lines(LastPoint),
-	    %% ?D_F("List= ~p~n", [List]),
+	    %% ?D_F("List= ~p", [List]),
 	    render(List)
     end.
 
@@ -170,7 +170,7 @@ compute(Collector, {X, Y, Z} = _Point) ->
     Iter = m3d:iter(MPoint),
     if
 	Iter == 255 ->
-	    %% ?D_F("Iter: ~p~n", [Iter]),
+	    %% ?D_F("Iter: ~p", [Iter]),
 	    %% krkrkrk Cmap sert plus a rien
 	    Collector ! {point, RPoint};
 	

@@ -62,7 +62,7 @@ loop(Parent, Debug, #state{labels=undefined} = State) ->
 	    loop(Parent, Debug, NewState);
 	
 	{system, From, Request} ->
-	    ?D_F("code v1 system message(1): From ~p Request: ~p~n", [From, Request]),
+	    ?D_F("code v1 system message(1): From ~p Request: ~p", [From, Request]),
             sys:handle_system_msg(Request, From, Parent, ?MODULE, Debug, State);
 	
 	_Other ->
@@ -76,11 +76,11 @@ loop(Parent, Debug, State) ->
 	    loop(Parent, Debug, State);
 
 	{'EXIT', _Pid, Reason} ->
-	    ?D_F("got EXIT from ~p with reason: ~p~n", [_Pid, Reason]),
+	    ?D_F("got EXIT from ~p with reason: ~p", [_Pid, Reason]),
 	    exit(Reason);
 
  	{system, From, Request} ->
-	    ?D_F("code v1 system message(2): From ~p Request: ~p~n", [From, Request]),
+	    ?D_F("code v1 system message(2): From ~p Request: ~p", [From, Request]),
             sys:handle_system_msg(Request, From, Parent, ?MODULE, Debug, State);
 
 	_Other ->
@@ -90,7 +90,7 @@ loop(Parent, Debug, State) ->
 
 
 system_continue(Parent, Debug, State) ->
-    ?D_F("code v1 system_continue(~p, ~p, ~p)~n", [Parent, Debug, State]),
+    ?D_F("code v1 system_continue(~p, ~p, ~p)", [Parent, Debug, State]),
     loop(Parent, Debug, State).
 
 
