@@ -14,8 +14,14 @@ all: $(REL).script $(REL).tar.gz
 	@echo Making tar file
 	erl -pa $(DIR) -noshell -eval 'ok = systools:make_tar("$(REL)", []), init:stop().'
 
+#PLAYLIST=test.pls
+#PLAYLIST=kraftwerk.pls
+PLAYLIST=lament.pls
+#PLAYLIST=moonlight.pls
+
 run:
-	@erl -pa $(DIR) -pa $(PCAP) -pa $(CURVE) -boot ecube -config sys
+	@erl -pa $(DIR) -pa $(PCAP) -pa $(CURVE) -boot ecube -config sys -ecube playlist $(PLAYLIST)
+#	@erl -pa $(DIR) -pa $(PCAP) -pa $(CURVE) -boot ecube -config sys
 #	@erl -pa $(DIR) -pa $(PCAP) -pa $(CURVE) -boot ecube -config small
 
 clean:

@@ -6,4 +6,4 @@
 
 -record(part, {ttl=?TTL*?MICRO, pos=?NULL, vel=?NULL, acc,
 	       col=?WHITE, tid,
-	       born=erlang:now(), last=erlang:now()}).
+	       born=now(), last=now()}).
