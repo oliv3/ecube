@@ -5,6 +5,12 @@
 %%%-------------------------------------------------------------------
 -module(ec_ps).
 
+%%
+%% gngngngngngngngnggngn TODO ne pas spawner un process par particule :(
+%% mais iterer sur une liste de #parts et la mettre a jour
+%% fuck :(
+%%
+
 -author('olivier@biniou.info').
 -vsn("1.0").
 
@@ -197,7 +203,7 @@ draw_particles(N, Ref, Acc) ->
 
 render_particle(Pos, Col) ->
     %% ?D_F("Pos= ~p", [Pos]),
-    gl:color3ubv(Col),
+    gl:color3fv(Col),
     gl:vertex3fv(Pos).
 
 

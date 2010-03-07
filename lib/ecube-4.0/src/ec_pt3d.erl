@@ -42,7 +42,7 @@
 %% rapidemnt wtf #{@
 -define(SLEEP, trunc(?CHUNKSIZE/?RATE*1000)). %% sleep time
 
--record(state, {rec, spline=[]}).
+-record(state, {rec, points=[], colors=[]}).
 
 %% Minimum value a `signed short int' can hold.
 -define(SHRT_MIN, -32768).
@@ -53,7 +53,7 @@
 -record(player, {
 	  track = 1,    %% current track
 	  ntracks = 0,  %% number of tracks
-	  tracks = {},  %% the tracks themselves
+	  tracks = {},  %% tuple of track names
 	  iport, oport, %% input / output ports
 	  acc = <<>>    %% accumulator
 	 }).
@@ -107,21 +107,15 @@ handle_call(_Request, _From, State) ->
 %%--------------------------------------------------------------------
 handle_cast({chunk, Binary}, State) ->
     Decoded = decode(Binary),
-    Points = pt3d(Decoded),
-    Curve = case curve:curve(?SPAN, Points) of
-		{error, badarg} ->
-		    [];
-		C ->
-		    %% Now = now(),
-		    %% Add = fun(Point = {X, Y, Z}) ->
-		    %% 		  Vel = {X*?VELF, Y*?VELF, Z*?VELF},
-		    %% 		  ec_ps:add(#part{pos=Point, ttl=2.0*?MICRO,
-		    %% 				  vel=Vel, born=Now, last=Now})
-		    %% 	  end,
-		    %% [Add(P) || P <- C],
-		    C
-	    end,
-    {noreply, State#state{spline=Curve}}.
+    {Points, Colors} = pt3d(Decoded),
+    {Curve1, Curve2} = case curve:curve(?SPAN, Points) of
+			   {error, badarg} ->
+			       {[], []};
+			   C ->
+			       Cols = curve:curve(?SPAN, Colors),
+			       {C, Cols}
+		       end,
+    {noreply, State#state{points=Curve1, colors=Curve2}}.
 
 %%--------------------------------------------------------------------
 %% Function: handle_info(Info, State) -> {noreply, State} |
@@ -129,16 +123,10 @@ handle_cast({chunk, Binary}, State) ->
 %%                                       {stop, Reason, State}
 %% Description: Handling all non call/cast messages
 %%--------------------------------------------------------------------
-handle_info({Pid, Ref, {draw, GL}}, #state{spline=S} = State) ->
+handle_info({Pid, Ref, {draw, GL}}, #state{points=Ps, colors=Cs} = State) ->
     wxGLCanvas:setCurrent(GL),
-    %% Ref2 = make_ref(),
-    %% RecPid ! {self(), Ref2, get},
-    %% receive
-    %% 	{Ref2, Chunk} ->
-    %% io:format("Points: ~p~n", [Points]),
-    Res = draw(S),
+    Res = draw(Ps, Cs),
     Pid ! {Ref, Res},
-    %%end,
     {noreply, State};
 
 handle_info({'EXIT', RecPid, Reason}, #state{rec=RecPid} = State) ->
@@ -215,40 +203,57 @@ decode(Chunk) ->
 decode(<<>>, Acc) ->
     lists:reverse(Acc);
 decode(<<Val:16/signed-little, Rest/binary>>, Acc) ->
-    decode(Rest, [Val|Acc]).
+    U = Val / ?SHRT_MIN,
+    decode(Rest, [U|Acc]).
 
 
-to_pos(Val) ->
-    (Val / ?SHRT_MIN).
+%% to_pos(Val) ->
+%%     Val. %%(Val / ?SHRT_MIN).
 
-%% to_comp(Val) -> %% rescale dans [0.0 .. 1.0] pour du glColor3fv
-%%     ((Val / ?SHRT_MIN) + 1.0) / 2.
+to_comp(Val) -> %% rescale dans [0.0 .. 1.0] pour du glColor3fv
+    %% ((Val / ?SHRT_MIN) + 1.0) / 2.
+    (Val + 1.0) / 2.
 
 
 pt3d(List) ->
-    pt3d(List, []).
-pt3d([X,Y,Z|Tail], Acc) ->
-    Point = {to_pos(X), to_pos(Y), to_pos(Z)},
-    pt3d([Y,Z|Tail], [Point|Acc]);
-pt3d(_Rest, Acc) -> %% no need to reverse, these are points
-    Acc.
+    pt3d(List, [], []).
+pt3d([X,Y,Z,R,G,B|Tail], Acc1, Acc2) ->
+    Point = {X, Y, Z}, %%{to_pos(X), to_pos(Y), to_pos(Z)},
+    Color = {to_comp(R), to_comp(G), to_comp(B)},
+    pt3d([Y,Z,R,G,B|Tail], [Point|Acc1], [Color|Acc2]);
+pt3d(_Rest, Acc1, Acc2) -> %% no need to reverse, these are points
+    {Acc1, Acc2}.
 
 
-d(Point = {X, Y, Z}, Now) ->
-    Vel = {X*?VELF, Y*?VELF, Z*?VELF},
-    %% ec_ps:add(#part{pos=Point, ttl=2.0*?MICRO, vel=Vel, born=Now, last=Now}),
-    gl:vertex3fv(Point).
+%% d(Point = {X, Y, Z}, Now) ->
+%%     Vel = {X*?VELF, Y*?VELF, Z*?VELF},
+%%     %% ec_ps:add(#part{pos=Point, ttl=2.0*?MICRO, vel=Vel, born=Now, last=Now}),
+%%     gl:vertex3fv(Point).
 
 
-draw([]) ->
+draw([], []) ->
     ok;
-draw(Points) ->
+draw(Points, Colors) ->
     gl:lineWidth(1.0),
-    gl:color3ub(255, 50, 150),
+    %% gl:color3ub(255, 50, 150),
     gl:'begin'(?GL_LINE_STRIP),
-    Now = now(),
-    [d(P, Now) || P <- Points],
+    %% Now = now(),
+    %% [d(P, Now) || P <- Points],
+    draw2(Points, Colors),
     gl:'end'().
+
+draw2([], []) ->
+    ok;
+draw2([P = {X, Y, Z}|Ps], [C|Cs]) ->
+    %% GL spline
+    gl:color3fv(C),
+    gl:vertex3fv(P),
+
+    %% Particles
+    Vel = {X*?VELF, Y*?VELF, Z*?VELF},
+    ec_ps:add(#part{pos=P, col=C, ttl=2.0*?MICRO, vel=Vel}),
+
+    draw2(Ps, Cs).
 
 
 player(Playlist) when is_atom(Playlist) ->
@@ -304,14 +309,15 @@ player(#player{track=T, ntracks=NT, tracks=Tracks,
     %% after ?SLEEP ->
 	    receive
 		{IP, {data, Data}} ->
-		    ?D_F("~p got ~p bytes", [IP, byte_size(Data)]),
+		    %% ?D_F("~p got ~p bytes", [IP, byte_size(Data)]),
 		    NData = concat_binary([Acc, Data]),
-		    ?D_F("Buffer: ~p bytes", [byte_size(NData)]),
+		    %% ?D_F("Buffer: ~p bytes", [byte_size(NData)]),
 		    if
 			byte_size(NData) >= ?BINARY_CHUNKSIZE ->
 			    %% ?D_YOUPI,
 			    {Chunk, Rest} = split_binary(NData, ?BINARY_CHUNKSIZE),
 			    chunk(Chunk),
+			    %% ?D_F("Sleeping ~p ms", [?SLEEP]),
 			    timer:sleep(?SLEEP),
 			    player(State#player{acc=Rest});
 
