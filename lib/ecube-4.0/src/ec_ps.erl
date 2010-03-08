@@ -4,13 +4,6 @@
 %%% Description : Particle system
 %%%-------------------------------------------------------------------
 -module(ec_ps).
-
-%%
-%% gngngngngngngngnggngn TODO ne pas spawner un process par particule :(
-%% mais iterer sur une liste de #parts et la mettre a jour
-%% fuck :(
-%%
-
 -author('olivier@biniou.info').
 -vsn("1.0").
 
@@ -27,13 +20,10 @@
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
 	 terminate/2, code_change/3]).
--export([loop/1]).
 
 -define(SERVER, ?MODULE).
 
--record(state, {
-	  p=[]    %% the particles
-	 }).
+-record(state, {p=[]}). %% the particles
 
 %%====================================================================
 %% API
@@ -48,14 +38,6 @@ start_link() ->
 %%====================================================================
 %% gen_server callbacks
 %%====================================================================
-
-%%--------------------------------------------------------------------
-%% Function: init(Args) -> {ok, State} |
-%%                         {ok, State, Timeout} |
-%%                         ignore               |
-%%                         {stop, Reason}
-%% Description: Initiates the server
-%%--------------------------------------------------------------------
 init([]) ->
     process_flag(trap_exit, true),
     Env = ec_gui:get_env(),
@@ -66,6 +48,7 @@ init([]) ->
 
 add(Part) when is_record(Part, part) ->
     gen_server:cast(?SERVER, {add, Part}).
+
 %%--------------------------------------------------------------------
 %% Function: %% handle_call(Request, From, State) -> {reply, Reply, State} |
 %%                                      {reply, Reply, State, Timeout} |
@@ -86,9 +69,7 @@ handle_call(_Request, _From, State) ->
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
 handle_cast({add, Part}, #state{p=P} = State) ->
-    Pid = spawn(?MODULE, loop, [Part]),
-    Parts = [Pid|P],
-    {noreply, State#state{p=Parts}};
+    {noreply, State#state{p=[Part|P]}};
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -101,9 +82,9 @@ handle_cast(_Msg, State) ->
 %%--------------------------------------------------------------------
 handle_info({Pid, Ref, {draw, GL}}, #state{p=P} = State) ->
     wxGLCanvas:setCurrent(GL),
-    NewPids = draw(P),
+    NewParts = draw(P),
     Pid ! {Ref, ok},
-    {noreply, State#state{p=NewPids}};
+    {noreply, State#state{p=NewParts}};
 
 handle_info(_Info, State) ->
     {noreply, State}.
@@ -115,10 +96,8 @@ handle_info(_Info, State) ->
 %% cleaning up. When it returns, the gen_server terminates with Reason.
 %% The return value is ignored.
 %%--------------------------------------------------------------------
-terminate(_Reason, #state{p=Parts}) ->
-    ?D_TERMINATE(_Reason),
-    ?D_F("Killing ~p particles", [length(Parts)]),
-    [P ! stop || P <- Parts].
+terminate(_Reason, _State) ->
+    ok.
 
 %%--------------------------------------------------------------------
 %% Func: code_change(OldVsn, State, Extra) -> {ok, NewState}
@@ -130,25 +109,6 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 %%% Internal functions
 %%--------------------------------------------------------------------
-loop(Part) ->
-    receive
-	stop ->
-	    ok;
-
-	{From, Ref, go} ->
-	    Res = go(Part),
-	    From ! {Ref, self(), Res},
-	    %% ?D_F("Res: ~p, rec= ~p", [Res, is_record(Res, part)]),
-	    case Res of
-		dead ->
-		    done;
-		
-		P when is_record(P, part) ->
-		    loop(P)
-	    end
-    end.
-
-
 go(#part{ttl=TTL, born=Born, last=Last} = P) ->
     Now = now(),
     Age = timer:now_diff(Now, Born),
@@ -161,65 +121,35 @@ go(#part{ttl=TTL, born=Born, last=Last} = P) ->
 	    Elapsed = timer:now_diff(Now, Last),
 	    ElapsedS = Elapsed / ?MICRO, %% in secs
 	    %% ?D_F("~p Age= ~p Elapsed= ~p (~p secs)", [self(), Age, Elapsed, ElapsedS]),
-	    {NPos, NVel} = move(P, ElapsedS),
-	    P#part{pos=NPos, vel=NVel, last=Now}
+	    NPos = move(P, ElapsedS),
+	    P#part{pos=NPos, last=Now}
     end.
 
 
-draw([]) ->
-    [];
-draw(Particles) when is_list(Particles) ->
-    N = length(Particles),
-    %% ?D_F("~p particles ~p processes", [N, length(processes())]),
-    Ref = make_ref(),
-    [P ! {self(), Ref, go} || P <- Particles],
-    %% draw_particles(N).
-    %% ?D_F("Drawing particles: ~p", [Particles]),
-    %% safe_draw_particles(N, Ref, Particles).
-    draw_particles(N, Ref).
+draw(Particles) ->
+    %% _N = length(Particles),
+    %% ?D_F("~p particles", [_N]),
+    Moved = [go(P) || P <- Particles],
+    Alive = [P || P <- Moved, P =/= dead],
+    draw2(Alive),
+    Alive.
 
-draw_particles(N, Ref) ->
-    %% gl:color3ubv(?WHITE),
+
+draw2([]) ->
+    ok;
+draw2(Particles) ->
     gl:pointSize(?PTSIZE),
     gl:'begin'(?GL_POINTS),
-    NewPids = draw_particles(N, Ref, []),
-    gl:'end'(),
-    NewPids.
-
-draw_particles(0, _Ref, Acc) ->
-    Acc;
-draw_particles(N, Ref, Acc) ->
-    NM1 = N-1,
-    receive
-	{Ref, _Pid, dead} ->
-	    %% ?D_F("particle ~p died", [_Pid]),
-	    draw_particles(NM1, Ref, Acc);
-
-	{Ref, Pid, #part{pos=Pos, col=Col}} ->
-	    render_particle(Pos, Col),
-	    draw_particles(NM1, Ref, [Pid|Acc])
-    end.
+    [render_particle(P) || P <- Particles],
+    gl:'end'().
 
 
-render_particle(Pos, Col) ->
-    %% ?D_F("Pos= ~p", [Pos]),
+render_particle(#part{pos=Pos, col=Col}) ->
     gl:color3fv(Col),
     gl:vertex3fv(Pos).
 
 
-move(#part{pos=Pos, vel=Vel, acc=undefined}, Elapsed) ->
-    NPos = move(Pos, Vel, Elapsed),
-    {NPos, Vel};
-move(#part{pos=Pos, vel={Vx, Vy, Vz}, acc={Ax, Ay, Az}}, Elapsed) ->
-    NVx = Vx + Elapsed * Ax,
-    NVy = Vy + Elapsed * Ay,
-    NVz = Vz + Elapsed * Az,
-    NVel = {NVx, NVy, NVz},
-    NPos = move(Pos, NVel, Elapsed),
-    {NPos, NVel}.
-
-
-move({Px, Py, Pz}, {Vx, Vy, Vz}, Elapsed) ->
+move(#part{pos={Px, Py, Pz}, vel={Vx, Vy, Vz}}, Elapsed) ->
     NPx = Px + Elapsed * Vx,
     NPy = Py + Elapsed * Vy,
     NPz = Pz + Elapsed * Vz,
