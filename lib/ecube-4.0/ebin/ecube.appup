@@ -1,0 +1,38 @@
+{"3.0",
+
+  %% Upgrade 1.0 -> 3.0
+  [{"1.0", [
+	{add_module, wxb_vol},
+	{add_module, biniou},
+	{add_module, tex_srv},
+	{load_module, objects},
+	{load_module, wxb_gl},
+	{update, wxb_3d, {advanced, []}},
+	{load_module, wxb_win},
+	{update, wxb_gui, {advanced, []}, [wxb_win]},
+	{load_module, cube, [objects, tex_srv]},
+	{update, wxb_cube, {advanced, []}, [wxb_gui, cube, objects]},
+	{update, wxb_sup, supervisor},
+	{apply, {supervisor, restart_child, [wxb_sup, wxb_vol]}},
+	{apply, {supervisor, restart_child, [wxb_sup, tex_srv]}}
+	]}],
+
+  %% Downgrade 3.0 -> 1.0
+  [{"1.0", [
+	{load_module, objects},
+	{load_module, wxb_gl},
+	{load_module, cube, [objects]},
+	{update, wxb_cube, {advanced, [cube, objects]}},
+	{apply, {supervisor, terminate_child, [wxb_sup, tex_srv]}},
+	{apply, {supervisor, delete_child, [wxb_sup, tex_srv]}},
+	{apply, {supervisor, terminate_child, [wxb_sup, wxb_vol]}},
+	{apply, {supervisor, delete_child, [wxb_sup, wxb_vol]}},
+	{update, wxb_sup, supervisor},
+	{update, wxb_gui, {advanced, []}},
+	{load_module, wxb_win},
+	{update, wxb_3d, {advanced, []}},
+	{delete_module, tex_srv},
+	{delete_module, biniou},
+	{delete_module, wxb_vol}
+	]}]
+}.
