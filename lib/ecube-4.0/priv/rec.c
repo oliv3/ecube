@@ -13,7 +13,7 @@
 static float pa_buff[ABUFF_SIZE];
 static pa_simple *pa_s = NULL;
 static pthread_t recorder;
-
+static int recording = 0;
 
 /*
  * PulseAudio-based recorder
@@ -32,7 +32,7 @@ static pthread_t recorder;
 //#include <arpa/inet.h>
 //#include <sys/io.h>
 
-/* #define DEBUG */
+#define DEBUG
 #define BUF_SIZE 65535
 
 static uint32_t read_cmd(char *buf, uint32_t *size);
@@ -75,12 +75,47 @@ my_decode_double(char *buf, int *index, double *val) {
 */
 
 
+static void
+ok() {
+  ei_x_buff result;
+
+  check(ei_x_new_with_version(&result));
+  check(ei_x_encode_atom(&result, "ok"));
+
+  write_cmd(&result);
+  ei_x_free(&result);
+}
+
+
+static void
+error() {
+  ei_x_buff result;
+
+  check(ei_x_new_with_version(&result));
+  check(ei_x_encode_tuple_header(&result, 2));
+  check(ei_x_encode_atom(&result, "error"));
+  if (recording)
+    check(ei_x_encode_atom(&result, "already_started"));
+  else
+    check(ei_x_encode_atom(&result, "not_started"));
+  
+  write_cmd(&result);
+  ei_x_free(&result);
+}
+
+
+static void
+record(long frequency) {
+  recording = 1;
+}
+
+
 int
 main(int argc, char **argv) {
-  char *buf = NULL;
+  char     *buf = NULL;
   uint32_t size = BUF_SIZE;
-  char      command[MAXATOMLEN];
-  int       index, version; //, arity;
+  char     command[MAXATOMLEN];
+  int      index, version;
 
   if ((buf = (char *)calloc(size, sizeof(char))) == NULL)
     return -1;
@@ -89,6 +124,8 @@ main(int argc, char **argv) {
     /* Reset the index, so that ei functions can decode terms from the 
      * beginning of the buffer */
     index = 0;
+
+    D("buf: %s", buf);
     
     /* Ensure that we are receiving the binary term by reading and 
      * stripping the version byte */
@@ -102,8 +139,32 @@ main(int argc, char **argv) {
      * if decode tuple de taille 2:
      *   starter le thread -> ok, {error, already_started} sinon
      */
-    
-    memset(buf, 0, size*sizeof(char));
+    if (!ei_decode_atom(buf, &index, command)) {
+      D("got atom: %s", command);
+      ok();
+    } else {
+      int arity;
+      long frequency;
+
+      check(ei_decode_tuple_header(buf, &index, &arity));
+      // D("ARITY: %d", arity);
+      if (arity != 2) check (-1);
+
+      check(ei_decode_atom(buf, &index, command));
+      // D("got atom 2: %s", command);
+      if (strcmp(command, "record")) check (-1);
+
+      check(ei_decode_long(buf, &index, &frequency));
+      // D("FREQ: %li", frequency);
+
+      if (!recording) {
+	record(frequency);
+	ok();
+      } else
+	error();
+    }
+
+    memset(buf, 0, size * sizeof(char));
   }
 
   free(buf);

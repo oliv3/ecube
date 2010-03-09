@@ -20,8 +20,8 @@ PLAYLIST=lament.pls
 #PLAYLIST=moonlight.pls
 
 run:
-	@erl -pa $(DIR) -pa $(PCAP) -pa $(CURVE) -boot ecube -config sys -ecube playlist $(PLAYLIST)
-#	@erl -pa $(DIR) -pa $(PCAP) -pa $(CURVE) -boot ecube -config sys
+#	@erl -pa $(DIR) -pa $(PCAP) -pa $(CURVE) -boot ecube -config sys -ecube playlist $(PLAYLIST)
+	@erl -pa $(DIR) -pa $(PCAP) -pa $(CURVE) -boot ecube -config sys
 #	@erl -pa $(DIR) -pa $(PCAP) -pa $(CURVE) -boot ecube -config small
 
 clean:
