@@ -2,6 +2,7 @@ DIR=../../lib/ecube-4.0/ebin
 REL=ecube
 PCAP=~/git/epcap/ebin
 CURVE=~/git/gl/maxBezier.erl
+EFLAGS=+K true +A 4
 
 all: $(REL).script $(REL).tar.gz
 
@@ -20,9 +21,9 @@ PLAYLIST=lament.pls
 #PLAYLIST=moonlight.pls
 
 run:
-#	@erl -pa $(DIR) -pa $(PCAP) -pa $(CURVE) -boot ecube -config sys -ecube playlist $(PLAYLIST)
-	@erl -pa $(DIR) -pa $(PCAP) -pa $(CURVE) -boot ecube -config sys
-#	@erl -pa $(DIR) -pa $(PCAP) -pa $(CURVE) -boot ecube -config small
+#	@erl $(EFLAGS) -pa $(DIR) -pa $(PCAP) -pa $(CURVE) -boot ecube -config sys -ecube playlist $(PLAYLIST)
+	@erl $(EFLAGS) -pa $(DIR) -pa $(PCAP) -pa $(CURVE) -boot ecube -config sys
+#	@erl $(EFLAGS) -pa $(DIR) -pa $(PCAP) -pa $(CURVE) -boot ecube -config small
 
 clean:
 	@rm -f erl_crash.dump *~ *.tar.gz *.script *.boot

@@ -5,12 +5,14 @@
 #include <ei.h>
 #include <unistd.h>
 #include <string.h>
+#include <pthread.h>
+#include <arpa/inet.h>
 
 #define INSIZE	   256
-#define ABUFF_SIZE INSIZE * 1 /* channels */  * sizeof(float)
+#define ABUFF_SIZE INSIZE * 1 /* channels */  * sizeof(short)
 
 
-static float pa_buff[ABUFF_SIZE];
+static short pa_buff[ABUFF_SIZE];
 static pa_simple *pa_s = NULL;
 static pthread_t recorder;
 static int recording = 0;
@@ -28,11 +30,7 @@ static int recording = 0;
  *
  */
 
-//#include <pthread.h>
-//#include <arpa/inet.h>
-//#include <sys/io.h>
-
-#define DEBUG
+/* #define DEBUG */
 #define BUF_SIZE 65535
 
 static uint32_t read_cmd(char *buf, uint32_t *size);
@@ -104,9 +102,74 @@ error() {
 }
 
 
+void *
+record(void *args) {
+  long frequency = *((long *)args);
+  int error;
+  pa_sample_spec ss;
+  char ss_a[PA_SAMPLE_SPEC_SNPRINT_MAX];
+
+  memset(pa_buff, 0, ABUFF_SIZE);
+
+  ss.format = PA_SAMPLE_S16LE;
+  ss.channels = 1;
+  ss.rate = frequency;
+
+  pa_s = pa_simple_new(NULL,               /* PulseAudio server. */
+                       "Recorder",         /* Application's name. */
+                       PA_STREAM_RECORD,   /* Stream direction. */
+                       NULL,               /* Sink Device. */
+                       "PulseAudio-read",  /* Stream description. */
+                       &ss,                /* Sample format. */
+                       NULL,               /* Channel map */
+                       NULL,               /* Buffering attributes. */
+                       &error              /* Error code. */
+                       );
+
+  if (NULL == pa_s) {
+    fprintf(stderr, __FILE__": pa_simple_new() failed: %s\n",
+           pa_strerror(error));
+    exit(1);
+  }
+
+  pa_sample_spec_snprint(ss_a, sizeof(ss_a), &ss);
+  fprintf(stderr,
+          "Opening the recording stream with sample specification '%s'.\r\n",
+          ss_a);
+
+  while (recording) {
+    int n;
+    int error;
+
+    n = pa_simple_read(pa_s, (void *)pa_buff, ABUFF_SIZE, &error);
+
+    if (-1 != n) {
+      int i;
+      ei_x_buff result;
+
+      check(ei_x_new_with_version(&result));
+      check(ei_x_encode_list_header(&result, INSIZE));
+
+      for (i = 0; i < INSIZE; i++)
+	check(ei_x_encode_long(&result, (long)pa_buff[i]));
+      check(ei_x_encode_empty_list(&result));
+
+      write_cmd(&result);
+      ei_x_free(&result);
+    }
+  }
+
+  pa_simple_free(pa_s);
+
+  pthread_exit(NULL);
+}
+
+
 static void
 start_recording(long frequency) {
   recording = 1;
+
+  pthread_create(&recorder, NULL, record, (void *)&frequency);
 
   ok();
 }
@@ -115,6 +178,8 @@ start_recording(long frequency) {
 static void
 stop_recording() {
   recording = 0;
+
+  pthread_join(recorder, NULL);
 
   ok();
 }
