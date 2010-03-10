@@ -10,7 +10,7 @@
 -include("ec.hrl").
 
 -export([start/0, stop/0]).
--export([vsn/0, priv_path/1, get_env/1]).
+-export([vsn/0, priv_path/1, get_env/1, get_env/2]).
 
 
 start() ->
@@ -34,7 +34,15 @@ priv_path(File) ->
 get_env(Key) ->
     case application:get_env(?APPNAME, Key) of
 	{ok, Val} ->
-	    Val;
+	    {ok, Val};
 	undefined ->
 	    undefined
+    end.
+
+get_env(Key, Default) ->
+    case get_env(Key) of
+	undefined ->
+	    Default;
+	Res ->
+	    Res
     end.
