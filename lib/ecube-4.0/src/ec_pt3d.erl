@@ -16,6 +16,7 @@
 -export([start_link/0]).
 
 %% Module API
+-export([chunk/1]).
 
 %% Internal exports
 -export([rec/0, player/1]).
