@@ -105,8 +105,18 @@ error() {
 
 
 static void
-record(long frequency) {
+start_recording(long frequency) {
   recording = 1;
+
+  ok();
+}
+
+
+static void
+stop_recording() {
+  recording = 0;
+
+  ok();
 }
 
 
@@ -141,25 +151,30 @@ main(int argc, char **argv) {
      */
     if (!ei_decode_atom(buf, &index, command)) {
       D("got atom: %s", command);
-      ok();
+      if (!strcmp(command, "stop")) {
+	if (recording)
+	  stop_recording();
+	else
+	  error();
+      } else
+	check(-1);
     } else {
       int arity;
       long frequency;
 
       check(ei_decode_tuple_header(buf, &index, &arity));
       // D("ARITY: %d", arity);
-      if (arity != 2) check (-1);
+      if (arity != 2) check(-1);
 
       check(ei_decode_atom(buf, &index, command));
       // D("got atom 2: %s", command);
-      if (strcmp(command, "record")) check (-1);
+      if (strcmp(command, "record")) check(-1);
 
       check(ei_decode_long(buf, &index, &frequency));
       // D("FREQ: %li", frequency);
 
       if (!recording) {
-	record(frequency);
-	ok();
+	start_recording(frequency);
       } else
 	error();
     }
