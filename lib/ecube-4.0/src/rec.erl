@@ -76,17 +76,11 @@ loop(Port) ->
 
 	stop ->
 	    %%?D_F("stopping port ~p", [?MODULE]),
-	    erlang:port_close(Port),
-	    exit(normal);
+	    erlang:port_close(Port);
 	
 	_Other ->
 	    ?D_UNHANDLED(_Other),
 	    loop(Port)
-
-    %% after 0 ->
-    %% 	    ?D_YOUPI,
-    %% 	    timer:sleep(1000),
-    %% 	    loop(Port)
     end.
 
 
