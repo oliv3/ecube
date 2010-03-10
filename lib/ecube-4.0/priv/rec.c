@@ -9,10 +9,10 @@
 #include <arpa/inet.h>
 
 #define INSIZE	   256
-#define ABUFF_SIZE INSIZE * 1 /* channels */  * sizeof(short)
+#define ABUFF_SIZE INSIZE * 1 /* channels */  * sizeof(double)
 
 
-static short pa_buff[ABUFF_SIZE];
+static double pa_buff[ABUFF_SIZE];
 static pa_simple *pa_s = NULL;
 static pthread_t recorder;
 static int recording = 0;
@@ -54,25 +54,6 @@ check(int val) {
 }
 
 
-/*
-static int
-my_decode_double(char *buf, int *index, double *val) {
-  long l;
-  unsigned long ul;
-  long long ll;
-  unsigned long long ull;
-
-  if (!ei_decode_double(buf, index, val)) return 0;
-  if (!ei_decode_long(buf, index, &l)) { *val = l; return 0; }
-  if (!ei_decode_ulong(buf, index, &ul)) { *val = ul; return 0; }
-  if (!ei_decode_longlong(buf, index, &ll)) { *val = ll; return 0; }
-  if (!ei_decode_ulonglong(buf, index, &ull)) { *val = ull; return 0; }
-
-  return -1;
-}
-*/
-
-
 static void
 ok() {
   ei_x_buff result;
@@ -111,7 +92,7 @@ record(void *args) {
 
   memset(pa_buff, 0, ABUFF_SIZE);
 
-  ss.format = PA_SAMPLE_S16LE;
+  ss.format = PA_SAMPLE_FLOAT32LE;
   ss.channels = 1;
   ss.rate = frequency;
 
@@ -151,7 +132,7 @@ record(void *args) {
       check(ei_x_encode_list_header(&result, INSIZE));
 
       for (i = 0; i < INSIZE; i++)
-	check(ei_x_encode_long(&result, (long)pa_buff[i]));
+	check(ei_x_encode_double(&result, pa_buff[i]));
       check(ei_x_encode_empty_list(&result));
 
       write_cmd(&result);
@@ -308,60 +289,3 @@ write_exact(char *buf, uint32_t len) {
 
   return len;
 }
-
-
-
-
-#if 0
-/* really old code */
-
-    check(ei_decode_tuple_header(buf, &index, &arity));
-    
-    if (arity != 3) return 3;
-  
-    check(ei_decode_atom(buf, &index, command));
-    
-    if (!strcmp("curve", command)) {
-      int i, l_arity;
-      ei_x_buff result;
-      
-      check(ei_decode_long(buf, &index, &span));
-      check(ei_decode_list_header(buf, &index, &l_arity));
-      D("List of arity %d", l_arity);
-	
-      for (i = 0; i < l_arity; i++) {
-	int t_arity;
-	  
-	check(ei_decode_tuple_header(buf, &index, &t_arity));
-	D("Tuple of arity %d", t_arity);
-	if (t_arity == 3) {
-	  double x, y, z;
-	  check(my_decode_double(buf, &index, &x));
-	  check(my_decode_double(buf, &index, &y));
-	  check(my_decode_double(buf, &index, &z));
-	} else
-	  check(-1);
-      }
-      /* skip empty list tail */
-      ei_skip_term(buf, &index);
-      D("Got %d points", l_arity);
-
-      /* Prepare the output buffer that will hold the result */
-      check(ei_x_new_with_version(&result));
-      check(ei_x_encode_list_header(&result, sp->nb_spoints));
-
-      for (i = 0; i < sp->nb_spoints; i++) {
-	check(ei_x_encode_tuple_header(&result, 3));
-	check(ei_x_encode_double(&result, sp->spoints[i].coords[0]));
-	check(ei_x_encode_double(&result, sp->spoints[i].coords[1]));
-	check(ei_x_encode_double(&result, sp->spoints[i].coords[2]));
-      }
-      check(ei_x_encode_empty_list(&result));
-      
-      write_cmd(&result);
-      ei_x_free(&result);
-      
-      memset(buf, 0, size*sizeof(char));
-    } else
-      check(-1);
-#endif /* 0 */
