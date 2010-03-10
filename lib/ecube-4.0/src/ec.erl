@@ -42,7 +42,7 @@ get_env(Key) ->
 get_env(Key, Default) ->
     case get_env(Key) of
 	undefined ->
-	    Default;
+	    {ok, Default};
 	Res ->
 	    Res
     end.
