@@ -56,13 +56,12 @@ loop(Port) ->
 	    Data = binary_to_term(BinData),
 	    %%?D_F("Got list of size ~p", [length(Data)]),
 	    %%?D_F("Got list ~p", [Data]),
-	    %% ec_pt3d:chunk(Data)
+	    ec_pt3d:chunk(Data),
 	    loop(Port);
 
 	{call, Caller, Ref, Msg} ->
 	    Bin = term_to_binary(Msg),
-	    ?D_F("Calling port with:~n~p (~p bytes) to Read~n",
-		 [Msg, byte_size(Bin)]),
+	    %% ?D_F("Calling port with:~n~p (~p bytes) to Read~n", [Msg, byte_size(Bin)]),
 	    port_command(Port, Bin),
 	    receive
 		{Port, {data, Data}} ->
@@ -76,7 +75,7 @@ loop(Port) ->
 	    end;
 
 	stop ->
-	    ?D_F("stopping port ~p", [?MODULE]),
+	    %%?D_F("stopping port ~p", [?MODULE]),
 	    erlang:port_close(Port),
 	    exit(normal);
 	

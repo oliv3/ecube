@@ -1,2 +1,2 @@
 #!/bin/sh
-erl -pa ../ebin -s trec -s init stop
+erl -noshell -pa ../ebin -s trec -s init stop

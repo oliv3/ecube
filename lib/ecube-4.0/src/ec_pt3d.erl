@@ -66,6 +66,9 @@ start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 %% TODO prendre une liste en argument et ne plus faire le decode/1
+chunk(List) when is_list(List) ->
+    gen_server:cast(?SERVER, {new_chunk, List}); %% rename en chunk quand ok
+%% TO BE obsoleted
 chunk(Binary) ->
     gen_server:cast(?SERVER, {chunk, Binary}).
 
@@ -107,6 +110,17 @@ handle_call(_Request, _From, State) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
+handle_cast({new_chunk, List}, State) ->
+    {Points, Colors} = pt3d(List),
+    {Curve1, Curve2} = case curve:curve(?SPAN, Points) of
+			   {error, badarg} ->
+			       {[], []};
+			   C ->
+			       Cols = curve:curve(?SPAN, Colors),
+			       {C, Cols}
+		       end,
+    {noreply, State#state{points=Curve1, colors=Curve2}};
+
 handle_cast({chunk, Binary}, State) ->
     Decoded = decode(Binary),
     {Points, Colors} = pt3d(Decoded),
