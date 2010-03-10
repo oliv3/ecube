@@ -65,6 +65,7 @@
 start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
+%% TODO prendre une liste en argument et ne plus faire le decode/1
 chunk(Binary) ->
     gen_server:cast(?SERVER, {chunk, Binary}).
 
