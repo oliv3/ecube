@@ -150,9 +150,9 @@ static void
 start_recording(long frequency) {
   recording = 1;
 
-  pthread_create(&recorder, NULL, record, (void *)&frequency);
-
   ok();
+
+  pthread_create(&recorder, NULL, record, (void *)&frequency);
 }
 
 
