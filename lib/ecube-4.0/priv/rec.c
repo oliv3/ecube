@@ -25,8 +25,8 @@ static int recording = 0;
  *
  * Commands:
  * 
- * {start, Frequency}
- * stop
+ * {start, Frequency} -> ok | {error, already_started}
+ * stop               -> ok | {error, not_started}
  *
  */
 
