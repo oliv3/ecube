@@ -8,11 +8,11 @@
 #include <pthread.h>
 #include <arpa/inet.h>
 
-#define INSIZE	   256
-#define ABUFF_SIZE INSIZE * 1 /* channels */  * sizeof(double)
+#define INSIZE	   512 // 256
+#define ABUFF_SIZE INSIZE * 1 /* channels */  * sizeof(float)
 
 
-static double pa_buff[ABUFF_SIZE];
+static float pa_buff[ABUFF_SIZE];
 static pa_simple *pa_s = NULL;
 static pthread_t recorder;
 static int recording = 0;
@@ -88,7 +88,10 @@ record(void *args) {
   long frequency = *((long *)args);
   int error;
   pa_sample_spec ss;
+#ifdef DEBUG
   char ss_a[PA_SAMPLE_SPEC_SNPRINT_MAX];
+  size_t frame_size;
+#endif
 
   memset(pa_buff, 0, ABUFF_SIZE);
 
@@ -113,10 +116,15 @@ record(void *args) {
     exit(1);
   }
 
+#ifdef DEBUG
   pa_sample_spec_snprint(ss_a, sizeof(ss_a), &ss);
   fprintf(stderr,
           "Opening the recording stream with sample specification '%s'.\r\n",
           ss_a);
+
+  frame_size = pa_frame_size(&ss);
+  fprintf(stderr, "Frame size: %d\r\n", frame_size);
+#endif
 
   while (recording) {
     int n;
@@ -136,6 +144,7 @@ record(void *args) {
       check(ei_x_encode_empty_list(&result));
 
       write_cmd(&result);
+      fflush(stdout);
       ei_x_free(&result);
     }
   }

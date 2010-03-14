@@ -54,7 +54,7 @@ loop(Port) ->
     receive
 	{Port, {data, BinData}} ->
 	    Data = binary_to_term(BinData),
-	    %%?D_F("Got list of size ~p", [length(Data)]),
+	    %% ?D_F("Got list of size ~p", [length(Data)]),
 	    %%?D_F("Got list ~p", [Data]),
 	    ec_pt3d:chunk(Data),
 	    loop(Port);

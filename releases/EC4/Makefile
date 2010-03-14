@@ -2,7 +2,7 @@ DIR=../../lib/ecube-4.0/ebin
 REL=ecube
 PCAP=~/git/epcap/ebin
 CURVE=~/git/gl/maxBezier.erl
-EFLAGS=+K true +A 4
+EFLAGS=+K true +A 2
 
 
 all: $(REL).script $(REL).tar.gz

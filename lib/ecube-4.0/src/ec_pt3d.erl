@@ -28,7 +28,7 @@
 -define(SERVER, ?MODULE).
 -define(F32, 32/float-native).
 
--define(SPAN, 5).
+-define(SPAN, 4).
 
 -define(RATE,  4410).
 %%-define(RATE,  8000).
@@ -36,28 +36,11 @@
 
 -define(VELF, 3.0).
 
-%% -define(CHUNKSIZE, 256).
-%% -define(BINARY_CHUNKSIZE, (?CHUNKSIZE*2)).    %% binary chunk size
-
-%% %% XXXXX gros problemes de synchro ça bouffe le stream input trop
-%% %% rapidemnt wtf #{@
-%% -define(SLEEP, trunc(?CHUNKSIZE/?RATE*1000)). %% sleep time
-
 -record(state, {rec, points=[], colors=[]}).
 
 %% Minimum value a `signed short int' can hold.
 -define(SHRT_MIN, -32768).
 %%-define(ISHRT_MIN, (1/?SHRT_MIN)).
-
-%% -define(PLAYER, player).
-
-%% -record(player, {
-%% 	  track = 1,    %% current track
-%% 	  ntracks = 0,  %% number of tracks
-%% 	  tracks = {},  %% tuple of track names
-%% 	  iport, oport, %% input / output ports
-%% 	  acc = <<>>    %% accumulator
-%% 	 }).
 
 %%====================================================================
 %% API
@@ -65,8 +48,7 @@
 start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
-
-chunk(List)
+chunk(List) ->
     gen_server:cast(?SERVER, {chunk, List}).
 
 %%====================================================================
@@ -74,22 +56,17 @@ chunk(List)
 %%====================================================================
 init([]) ->
     process_flag(trap_exit, true),
+
     Env = ec_gui:get_env(),
     wx:set_env(Env),
-    curve:start(), %% FIXME :stop() not called in terminate ?!
 
-    %%
-    %% ===========>  HERE  <================
-    %%
-    RecPid = case Playlist of
-		 undefined ->
-		     spawn_link(fun ?MODULE:rec/0);
-		 Playlist ->
-		     spawn_link(fun() -> ?MODULE:player(Playlist) end)
-	     end,
+    curve:start(), %% FIXME curve:stop() not called in terminate/2 ?!
+
+    rec:start(),
+    ok = rec:record(?RATE),
 
     ec_gui:register(self()),
-    {ok, #state{rec=RecPid}}.
+    {ok, #state{}}.
 
 %%--------------------------------------------------------------------
 %% Function: %% handle_call(Request, From, State) -> {reply, Reply, State} |
@@ -133,10 +110,6 @@ handle_info({Pid, Ref, {draw, GL}}, #state{points=Ps, colors=Cs} = State) ->
     Pid ! {Ref, Res},
     {noreply, State};
 
-handle_info({'EXIT', RecPid, Reason}, #state{rec=RecPid} = State) ->
-    ?D_F("Recorder pid ~p exited with reason ~p", [RecPid, Reason]),
-    {stop, Reason, State};
-
 handle_info(_Info, State) ->
     ?D_UNHANDLED(_Info),
     {noreply, State}.
@@ -148,14 +121,10 @@ handle_info(_Info, State) ->
 %% cleaning up. When it returns, the gen_server terminates with Reason.
 %% The return value is ignored.
 %%--------------------------------------------------------------------
-terminate(_Reason, #state{rec=RecPid}) ->
+terminate(_Reason, _State) ->
     ?D_TERMINATE(_Reason),
-    Ref = make_ref(),
-    RecPid ! {self(), Ref, stop},
-    receive
-	{Ref, ok} ->
-	    curve:stop()
-    end.
+    curve:stop(),
+    rec:stop().
 
 %%--------------------------------------------------------------------
 %% Func: code_change(OldVsn, State, Extra) -> {ok, NewState}
@@ -184,11 +153,14 @@ pt3d(_Rest, Acc1, Acc2) -> %% no need to reverse, these are points
 draw([], []) ->
     ok;
 draw(Points, Colors) ->
-    gl:lineWidth(1.0),
+    gl:lineWidth(2.0),
     gl:'begin'(?GL_LINE_STRIP),
+    %% ?D_F("draw2: ~p ~p~n", [Points, Colors]),
     draw2(Points, Colors),
     gl:'end'().
 
+
+-define(ORIGIN, {0.0, -1.0, 0.0}).
 
 draw2([], []) ->
     ok;
@@ -196,9 +168,11 @@ draw2([P = {X, Y, Z}|Ps], [C|Cs]) ->
     %% Spline
     gl:color3fv(C),
     gl:vertex3fv(P),
+    %% gl:vertex3fv(?ORIGIN), %% fountain
 
     %% Particles
-    Vel = {X*?VELF, Y*?VELF, Z*?VELF},
-    ec_ps:add(#part{pos=P, col=C, ttl=2.0*?MICRO, vel=Vel}),
+    %% Vel = {X*?VELF, Y*?VELF, Z*?VELF},
+    %% Vel = {X*?VELF, abs(Y*?VELF), Z*?VELF}, %% fountain
+    %% ec_ps:add(#part{pos=P, col=C, ttl=1.5*?MICRO, vel=Vel}),
 
     draw2(Ps, Cs).
