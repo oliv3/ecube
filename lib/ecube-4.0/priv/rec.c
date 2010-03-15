@@ -8,7 +8,7 @@
 #include <pthread.h>
 #include <arpa/inet.h>
 
-#define INSIZE	   512 // 256
+#define INSIZE	   256 //512 // 256
 #define ABUFF_SIZE INSIZE * 1 /* channels */  * sizeof(float)
 
 

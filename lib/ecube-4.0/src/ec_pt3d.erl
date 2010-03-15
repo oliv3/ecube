@@ -16,10 +16,7 @@
 -export([start_link/0]).
 
 %% Module API
--export([chunk/1]).
-
-%% Internal exports
-%% -export([rec/0, player/1]).
+-export([points/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -28,15 +25,13 @@
 -define(SERVER, ?MODULE).
 -define(F32, 32/float-native).
 
--define(SPAN, 4).
-
 -define(RATE,  4410).
 %%-define(RATE,  8000).
 %%-define(RATE,  44100).
 
 -define(VELF, 3.0).
 
--record(state, {rec, points=[], colors=[]}).
+-record(state, {rec, points=[]}).
 
 %% Minimum value a `signed short int' can hold.
 -define(SHRT_MIN, -32768).
@@ -48,8 +43,8 @@
 start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
-chunk(List) ->
-    gen_server:cast(?SERVER, {chunk, List}).
+points(Points) ->
+    gen_server:cast(?SERVER, {points, Points}).
 
 %%====================================================================
 %% gen_server callbacks
@@ -87,16 +82,8 @@ handle_call(_Request, _From, State) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
-handle_cast({chunk, List}, State) ->
-    {Points, Colors} = pt3d(List),
-    {Curve1, Curve2} = case curve:curve(?SPAN, Points) of
-			   {error, badarg} ->
-			       {[], []};
-			   C ->
-			       Cols = curve:curve(?SPAN, Colors),
-			       {C, Cols}
-		       end,
-    {noreply, State#state{points=Curve1, colors=Curve2}}.
+handle_cast({points, Points}, State) ->
+    {noreply, State#state{points=Points}}.
 
 %%--------------------------------------------------------------------
 %% Function: handle_info(Info, State) -> {noreply, State} |
@@ -104,9 +91,9 @@ handle_cast({chunk, List}, State) ->
 %%                                       {stop, Reason, State}
 %% Description: Handling all non call/cast messages
 %%--------------------------------------------------------------------
-handle_info({Pid, Ref, {draw, GL}}, #state{points=Ps, colors=Cs} = State) ->
+handle_info({Pid, Ref, {draw, GL}}, #state{points=Ps} = State) ->
     wxGLCanvas:setCurrent(GL),
-    Res = draw(Ps, Cs),
+    Res = draw(Ps),
     Pid ! {Ref, Res},
     {noreply, State};
 
@@ -136,43 +123,21 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 %%% Internal functions
 %%--------------------------------------------------------------------
-to_comp(Val) -> %% rescale dans [0.0 .. 1.0] pour du glColor3fv
-    (Val + 1.0) / 2.
+to_comp(Val) -> %% rescale dans [0.0..2.0] pour du glColor3fv
+    abs(Val) * 2.0.
 
 
-pt3d(List) ->
-    pt3d(List, [], []).
-pt3d([X,Y,Z,R,G,B|Tail], Acc1, Acc2) ->
-    Point = {X, Y, Z},
-    Color = {to_comp(R), to_comp(G), to_comp(B)},
-    pt3d([Y,Z,R,G,B|Tail], [Point|Acc1], [Color|Acc2]);
-pt3d(_Rest, Acc1, Acc2) -> %% no need to reverse, these are points
-    {Acc1, Acc2}.
-
-
-draw([], []) ->
+draw([]) ->
     ok;
-draw(Points, Colors) ->
+draw(Points) ->
     gl:lineWidth(2.0),
     gl:'begin'(?GL_LINE_STRIP),
-    %% ?D_F("draw2: ~p ~p~n", [Points, Colors]),
-    draw2(Points, Colors),
+    Draw = fun(P = {X, Y, Z}) ->
+		   C = {to_comp(X), to_comp(Y), to_comp(Z)},
+		   Vel = {X*?VELF, Y*?VELF, Z*?VELF},
+		   ec_ps:add(#part{pos=P, col=C, ttl=1.5*?MICRO, vel=Vel}),
+		   gl:color3fv(C),
+		   gl:vertex3fv(P)
+	   end,
+    [Draw(P) || P <- Points],
     gl:'end'().
-
-
--define(ORIGIN, {0.0, -1.0, 0.0}).
-
-draw2([], []) ->
-    ok;
-draw2([P = {X, Y, Z}|Ps], [C|Cs]) ->
-    %% Spline
-    gl:color3fv(C),
-    gl:vertex3fv(P),
-    %% gl:vertex3fv(?ORIGIN), %% fountain
-
-    %% Particles
-    %% Vel = {X*?VELF, Y*?VELF, Z*?VELF},
-    %% Vel = {X*?VELF, abs(Y*?VELF), Z*?VELF}, %% fountain
-    %% ec_ps:add(#part{pos=P, col=C, ttl=1.5*?MICRO, vel=Vel}),
-
-    draw2(Ps, Cs).

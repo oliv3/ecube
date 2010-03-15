@@ -15,6 +15,8 @@
 %% Internal exports
 -export([init/0]).
 
+-define(SPAN, 6).
+
 
 start() -> 
     Pid = spawn_link(?MODULE, init, []),
@@ -56,7 +58,14 @@ loop(Port) ->
 	    Data = binary_to_term(BinData),
 	    %% ?D_F("Got list of size ~p", [length(Data)]),
 	    %%?D_F("Got list ~p", [Data]),
-	    ec_pt3d:chunk(Data),
+	    Points = pt3d(Data),
+	    Curve = case curve:curve(?SPAN, Points) of
+			{error, badarg} ->
+			    [];
+			C ->
+			    C
+		    end,
+	    ec_pt3d:points(Curve),
 	    loop(Port);
 
 	{call, Caller, Ref, Msg} ->
@@ -86,3 +95,12 @@ loop(Port) ->
 
 open_port() ->
     open_port({spawn, "./rec"}, [{packet, 4}, binary]).
+
+
+pt3d(List) ->
+    pt3d(List, []).
+pt3d([X,Y,Z|Tail], Acc) ->
+    Point = {X, Y, Z},
+    pt3d([Y,Z|Tail], [Point|Acc]);
+pt3d(_Rest, Acc) -> %% no need to reverse, these are points
+    Acc.
