@@ -1,7 +1,6 @@
 DIR=../../lib/ecube-4.0/ebin
 REL=ecube
 PCAP=~/git/epcap/ebin
-CURVE=~/git/gl/maxBezier.erl
 EFLAGS=+K true +A 2
 
 
@@ -20,9 +19,9 @@ all: $(REL).script $(REL).tar.gz
 
 
 run:
-#	@erl $(EFLAGS) -pa $(DIR) -pa $(PCAP) -pa $(CURVE) -boot ecube -config sys
-	@erl $(EFLAGS) -pa $(DIR) -pa $(PCAP) -pa $(CURVE) -boot ecube -config sys
-#	@erl $(EFLAGS) -pa $(DIR) -pa $(PCAP) -pa $(CURVE) -boot ecube -config small
+#	@erl $(EFLAGS) -pa $(DIR) -pa $(PCAP) -boot ecube -config sys
+	@erl $(EFLAGS) -pa $(DIR) -pa $(PCAP) -boot ecube -config sys
+#	@erl $(EFLAGS) -pa $(DIR) -pa $(PCAP) -boot ecube -config small
 
 clean:
 	@rm -f erl_crash.dump *~ *.tar.gz *.script *.boot
