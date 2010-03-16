@@ -4,8 +4,15 @@ LDFLAGS=-L. -L$(ERL_LIB)/lib `pkg-config libpulse-simple --libs` -lerl_interface
 
 all: rec
 
-rec: rec.c
-	gcc $(CFLAGS) $< -o $@ $(LDFLAGS)
+# rec: rec.c spline.c
+# 	gcc $(CFLAGS) $< -o $@ $(LDFLAGS)
+
+OBJS=rec.o spline.o
+rec: $(OBJS)
+	gcc $(OBJS) $(LDFLAGS) -o $@ -lerl_interface -lei -lpthread 
+
+%.o: %.c
+	gcc $(DEBUG) -c $(CFLAGS) $< -o $@
 
 clean:
-	@rm -f *~ rec
+	@rm -f *.o *~ rec
