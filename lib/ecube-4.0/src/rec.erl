@@ -10,12 +10,10 @@
 -include("ec.hrl").
 
 %% API
--export([start/0, record/1, stop/0]).
+-export([start/0, record/2, stop/0]).
 
 %% Internal exports
 -export([init/0]).
-
--define(SPAN, 6).
 
 
 start() -> 
@@ -23,9 +21,9 @@ start() ->
     ?D_REGISTER(?MODULE, Pid).
 
 
-record(Freq) -> 
-    ?D_F("Recording at ~pHz", [Freq]),
-    call_port({record, Freq}).
+record(Freq, Span) -> 
+    ?D_F("Recording at ~pHz, span: ~p", [Freq, Span]),
+    call_port({record, Freq, Span}).
 
 
 stop() ->
@@ -44,11 +42,8 @@ call_port(Msg) ->
 
 
 init() ->
-    %% ?D_YOUPI,
     process_flag(trap_exit, true),
     Port = open_port(),
-    %% ?D_F("yaaeeahahahhahah port= ~p", [Port]),
-    %% call_port({start, Freq}),
     loop(Port).
 
 
@@ -56,16 +51,7 @@ loop(Port) ->
     receive
 	{Port, {data, BinData}} ->
 	    Data = binary_to_term(BinData),
-	    %% ?D_F("Got list of size ~p", [length(Data)]),
-	    %%?D_F("Got list ~p", [Data]),
-	    Points = pt3d(Data),
-	    Curve = case curve:curve(?SPAN, Points) of
-			{error, badarg} ->
-			    [];
-			C ->
-			    C
-		    end,
-	    ec_pt3d:points(Curve),
+	    ec_pt3d:points(Data),
 	    loop(Port);
 
 	{call, Caller, Ref, Msg} ->
@@ -95,12 +81,3 @@ loop(Port) ->
 
 open_port() ->
     open_port({spawn, "./rec"}, [{packet, 4}, binary]).
-
-
-pt3d(List) ->
-    pt3d(List, []).
-pt3d([X,Y,Z|Tail], Acc) ->
-    Point = {X, Y, Z},
-    pt3d([Y,Z|Tail], [Point|Acc]);
-pt3d(_Rest, Acc) -> %% no need to reverse, these are points
-    Acc.

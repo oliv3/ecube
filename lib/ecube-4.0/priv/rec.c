@@ -7,14 +7,17 @@
 #include <string.h>
 #include <pthread.h>
 #include <arpa/inet.h>
+#include "spline.h"
 
-#define INSIZE	   256 //512 // 256
+#define INSIZE	   256
 #define ABUFF_SIZE INSIZE * 1 /* channels */  * sizeof(float)
 
 
 static float pa_buff[ABUFF_SIZE];
 static pa_simple *pa_s = NULL;
 static pthread_t recorder;
+static long frequency = -1;
+static int span = -1;
 static int recording = 0;
 
 /*
@@ -30,7 +33,7 @@ static int recording = 0;
  *
  */
 
-/* #define DEBUG */
+#define DEBUG
 #define BUF_SIZE 65535
 
 static uint32_t read_cmd(char *buf, uint32_t *size);
@@ -44,6 +47,7 @@ static uint32_t write_exact(char *buf, uint32_t len);
 #define D(F, A) {}
 #endif
 
+static Spline_t *sp = NULL;
 
 static inline void
 check(int val) {
@@ -85,7 +89,6 @@ error() {
 
 void *
 record(void *args) {
-  long frequency = *((long *)args);
   int error;
   pa_sample_spec ss;
 #ifdef DEBUG
@@ -129,18 +132,36 @@ record(void *args) {
   while (recording) {
     int n;
     int error;
+    Point3d_t *ptr = NULL;
 
     n = pa_simple_read(pa_s, (void *)pa_buff, ABUFF_SIZE, &error);
+
+    // D("%s", "RECORD ON");
+    ptr = sp->cpoints;
 
     if (-1 != n) {
       int i;
       ei_x_buff result;
 
-      check(ei_x_new_with_version(&result));
-      check(ei_x_encode_list_header(&result, INSIZE));
+      for (i = 0; i < (INSIZE-2); i++) {
+	ptr->coords[0] = pa_buff[i];
+	ptr->coords[1] = pa_buff[i+1];
+	ptr->coords[2] = pa_buff[i+2];
+	ptr++;
+      }
 
-      for (i = 0; i < INSIZE; i++)
-	check(ei_x_encode_double(&result, pa_buff[i]));
+      Spline_compute(sp);
+
+      /* Prepare the output buffer that will hold the result */
+      check(ei_x_new_with_version(&result));
+      check(ei_x_encode_list_header(&result, sp->nb_spoints));
+
+      for (i = 0; i < sp->nb_spoints; i++) {
+	check(ei_x_encode_tuple_header(&result, 3));
+	check(ei_x_encode_double(&result, sp->spoints[i].coords[0]));
+	check(ei_x_encode_double(&result, sp->spoints[i].coords[1]));
+	check(ei_x_encode_double(&result, sp->spoints[i].coords[2]));
+      }
       check(ei_x_encode_empty_list(&result));
 
       write_cmd(&result);
@@ -156,12 +177,13 @@ record(void *args) {
 
 
 static void
-start_recording(long frequency) {
+start_recording() {
   recording = 1;
 
+  sp = Spline_new(span, (INSIZE-2));
   ok();
 
-  pthread_create(&recorder, NULL, record, (void *)&frequency);
+  pthread_create(&recorder, NULL, record, NULL);
 }
 
 
@@ -170,6 +192,7 @@ stop_recording() {
   recording = 0;
 
   pthread_join(recorder, NULL);
+  Spline_delete(sp);
 
   ok();
 }
@@ -182,6 +205,8 @@ main(int argc, char **argv) {
   char     command[MAXATOMLEN];
   int      index, version;
 
+  // D("======> %s", "CHUISLAAAAAA");
+
   if ((buf = (char *)calloc(size, sizeof(char))) == NULL)
     return -1;
 
@@ -190,7 +215,7 @@ main(int argc, char **argv) {
      * beginning of the buffer */
     index = 0;
 
-    D("buf: %s", buf);
+    // D("buf: %s", buf);
     
     /* Ensure that we are receiving the binary term by reading and 
      * stripping the version byte */
@@ -215,21 +240,25 @@ main(int argc, char **argv) {
 	check(-1);
     } else {
       int arity;
-      long frequency;
+      long _span;
 
       check(ei_decode_tuple_header(buf, &index, &arity));
-      // D("ARITY: %d", arity);
-      if (arity != 2) check(-1);
+      D("ARITY: %d", arity);
+      if (arity != 3) check(-1);
 
       check(ei_decode_atom(buf, &index, command));
-      // D("got atom 2: %s", command);
+      D("got atom 2: %s", command);
       if (strcmp(command, "record")) check(-1);
 
       check(ei_decode_long(buf, &index, &frequency));
-      // D("FREQ: %li", frequency);
+      D("FREQ: %li", frequency);
+
+      check(ei_decode_long(buf, &index, &_span));
+      span = _span;
+      D("SPAN: %i", span);
 
       if (!recording) {
-	start_recording(frequency);
+	start_recording();
       } else
 	error();
     }

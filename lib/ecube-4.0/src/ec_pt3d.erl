@@ -29,6 +29,8 @@
 %%-define(RATE,  8000).
 %%-define(RATE,  44100).
 
+-define(SPAN, 10).
+
 -define(VELF, 3.0).
 
 -record(state, {rec, points=[]}).
@@ -55,10 +57,10 @@ init([]) ->
     Env = ec_gui:get_env(),
     wx:set_env(Env),
 
-    curve:start(), %% FIXME curve:stop() not called in terminate/2 ?!
+    %% curve:start(), %% FIXME curve:stop() not called in terminate/2 ?!
 
     rec:start(),
-    ok = rec:record(?RATE),
+    ok = rec:record(?RATE, ?SPAN),
 
     ec_gui:register(self()),
     {ok, #state{}}.
@@ -110,7 +112,7 @@ handle_info(_Info, State) ->
 %%--------------------------------------------------------------------
 terminate(_Reason, _State) ->
     ?D_TERMINATE(_Reason),
-    curve:stop(),
+    %% curve:stop(),
     rec:stop().
 
 %%--------------------------------------------------------------------
@@ -123,8 +125,12 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 %%% Internal functions
 %%--------------------------------------------------------------------
-to_comp(Val) -> %% rescale dans [0.0..2.0] pour du glColor3fv
-    abs(Val) * 2.0.
+
+%% rescale dans [0.0..4.0] pour du glColor3fv
+%% ouiiiii le max c'est 1.0 mais on estime que les composantes sont au
+%% 25% de l'espace possible
+to_comp(Val) ->
+    abs(Val) * 4.0.
 
 
 draw([]) ->
@@ -134,8 +140,8 @@ draw(Points) ->
     gl:'begin'(?GL_LINE_STRIP),
     Draw = fun(P = {X, Y, Z}) ->
 		   C = {to_comp(X), to_comp(Y), to_comp(Z)},
-		   Vel = {X*?VELF, Y*?VELF, Z*?VELF},
-		   ec_ps:add(#part{pos=P, col=C, ttl=1.5*?MICRO, vel=Vel}),
+		   %% Vel = {X*?VELF, Y*?VELF, Z*?VELF},
+		   %% ec_ps:add(#part{pos=P, col=C, ttl=1.5*?MICRO, vel=Vel}),
 		   gl:color3fv(C),
 		   gl:vertex3fv(P)
 	   end,
