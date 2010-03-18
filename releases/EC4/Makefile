@@ -1,7 +1,7 @@
 DIR=../../lib/ecube-4.0/ebin
 REL=ecube
 PCAP=~/git/epcap/ebin
-EFLAGS=+K true +A 2
+EFLAGS=+K true +A 2 -noshell -pa $(DIR) -pa $(PCAP) -boot ecube
 
 
 all: $(REL).script $(REL).tar.gz
@@ -19,9 +19,8 @@ all: $(REL).script $(REL).tar.gz
 
 
 run:
-#	@erl $(EFLAGS) -pa $(DIR) -pa $(PCAP) -boot ecube -config sys
-	@erl $(EFLAGS) -pa $(DIR) -pa $(PCAP) -boot ecube -config sys
-#	@erl $(EFLAGS) -pa $(DIR) -pa $(PCAP) -boot ecube -config small
+	@erl $(EFLAGS) -config sys
+#	@erl $(EFLAGS) -config small
 
 clean:
 	@rm -f erl_crash.dump *~ *.tar.gz *.script *.boot
