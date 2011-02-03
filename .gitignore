@@ -1,3 +1,6 @@
 *~
 erl_crash.dump
 *.beam
+*.boot
+*.script
+*.tar.gz
