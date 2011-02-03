@@ -43,17 +43,18 @@ init([]) ->
     OSD = {ec_osd, {ec_osd, start_link, []},
 	   permanent, ?TIMEOUT, worker, [ec_osd]},
 
-    M3D = {ec_m3d, {ec_m3d, start_link, []},
-	   permanent, brutal_kill, worker, [ec_m3d]},
+%%    M3D = {ec_m3d, {ec_m3d, start_link, []},
+%%	   permanent, brutal_kill, worker, [ec_m3d]},
 
-    PCAP = {ec_pcap, {ec_pcap, start_link, []},
-	    permanent, ?TIMEOUT, worker, [ec_pcap]},
+  %%  PCAP = {ec_pcap, {ec_pcap, start_link, []},
+%%	    permanent, ?TIMEOUT, worker, [ec_pcap]},
 
-    PT3D = {ec_pt3d, {ec_pt3d, start_link, []},
-	    permanent, ?TIMEOUT, worker, [ec_pt3d]},
+  %%  PT3D = {ec_pt3d, {ec_pt3d, start_link, []},
+%%	    permanent, ?TIMEOUT, worker, [ec_pt3d]},
 
-    PS = {ec_ps, {ec_ps, start_link, []},
-	  permanent, ?TIMEOUT, worker, [ec_ps]},
+  %%  PS = {ec_ps, {ec_ps, start_link, []},
+%%	  permanent, ?TIMEOUT, worker, [ec_ps]},
 
     %% {ok, {{one_for_one, 10, 1}, [CfgSrv, VolSrv, TexSrv, GUI, PS, Demo, OSD, PCAP]}}.
-    {ok, {{one_for_one, 10, 1}, [CfgSrv, VolSrv, TexSrv, GUI, PS, Demo, OSD, PT3D]}}.
+    %%{ok, {{one_for_one, 10, 1}, [CfgSrv, VolSrv, TexSrv, GUI, PS, Demo, OSD, PT3D]}}.
+    {ok, {{one_for_one, 10, 1}, [CfgSrv, VolSrv, TexSrv, GUI, Demo, OSD]}}.

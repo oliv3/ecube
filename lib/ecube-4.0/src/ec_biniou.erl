@@ -37,7 +37,7 @@ args(Id) ->
     lists:flatten([" -i ", Input, " -o ", ?OUTPUT
 		   " -x ", ?I2L(W), " -y ", ?I2L(H),
 		   " -m ", ?I2L(ec:get_env(biniou_fps)), " -r 2 ",
-		   " --pidfile=/tmp/biniou" ++ ?I2L(Id),
+		   " -p /tmp/biniou" ++ ?I2L(Id),
 		   " > /dev/null 2>&1"]).
 
 
