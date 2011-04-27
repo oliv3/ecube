@@ -16,7 +16,7 @@
 
 -record(state, {port, frame=0, data}).
 
--define(BINIOU, "Biniou").
+-define(BINIOU, "lebiniou").
 -define(INPUT,  "pulseaudio").
 -define(OUTPUT, "erlang").
 -define(I2L(X), integer_to_list(X)).
