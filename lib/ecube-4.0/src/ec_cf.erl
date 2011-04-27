@@ -19,8 +19,9 @@
 -export([opt/1, toggle/1, set/1, unset/1]).      %% Options
 
 %% Default active options
-%% -define(OPTIONS, [?O_SPIN, ?O_EDGES, ?O_MUTE, ?O_OSD]).
--define(OPTIONS, [?O_MUTE]).
+-define(OPTIONS, [?O_EDGES, ?O_TEXT, ?O_MUTE, ?O_OSD]).
+%%-define(OPTIONS, [?O_SPIN, ?O_EDGES, ?O_MUTE, ?O_OSD]).
+%%-define(OPTIONS, [?O_MUTE]).
 
 -define(NULL_ROT,    {0, 0, 0}).
 -define(DEFAULT_ROT, {30, 56, 0}).
