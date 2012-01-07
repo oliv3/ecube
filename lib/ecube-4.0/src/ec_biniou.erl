@@ -39,6 +39,7 @@ args(Id) ->
 		   " -m ", ?I2L(ec:get_env(biniou_fps)), " -r 2 ",
 		   " -p /tmp/biniou" ++ ?I2L(Id),
 		   " > /dev/null 2>&1"]).
+		   %% " > /tmp/biniou.out 2>&1"]).
 
 
 start(Id) ->

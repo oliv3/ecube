@@ -24,21 +24,28 @@ start_link() ->
     supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
 
-init([]) ->
-    CfgSrv = {ec_cf, {ec_cf, start_link, []},
-	      permanent, brutal_kill, worker, [ec_cf]},
-
+modules(biniou) ->
     VolSrv = {ec_vol, {ec_vol, start_link, []},
 	      permanent, brutal_kill, worker, [ec_vol]},
 
     TexSrv = {ec_tex, {ec_tex, start_link, []},
 	      permanent, ?TIMEOUT, worker, [ec_tex]},
 
-    GUI = {ec_gui, {ec_gui, start_link, []},
-	   permanent, ?TIMEOUT, worker, [ec_gui]},
-
     Demo = {ec_demo, {ec_demo, start_link, []},
 	    permanent, ?TIMEOUT, worker, [ec_demo]},
+
+    [VolSrv, TexSrv, Demo];
+modules(_OtherDemo) ->
+    [].
+
+-define(DEMO, biniou).
+
+init([]) ->
+    CfgSrv = {ec_cf, {ec_cf, start_link, []},
+	      permanent, brutal_kill, worker, [ec_cf]},
+
+    GUI = {ec_gui, {ec_gui, start_link, []},
+	   permanent, ?TIMEOUT, worker, [ec_gui]},
 
     OSD = {ec_osd, {ec_osd, start_link, []},
 	   permanent, ?TIMEOUT, worker, [ec_osd]},
@@ -55,6 +62,6 @@ init([]) ->
   %%  PS = {ec_ps, {ec_ps, start_link, []},
 %%	  permanent, ?TIMEOUT, worker, [ec_ps]},
 
-    %% {ok, {{one_for_one, 10, 1}, [CfgSrv, VolSrv, TexSrv, GUI, PS, Demo, OSD, PCAP]}}.
-    %%{ok, {{one_for_one, 10, 1}, [CfgSrv, VolSrv, TexSrv, GUI, PS, Demo, OSD, PT3D]}}.
-    {ok, {{one_for_one, 10, 1}, [CfgSrv, VolSrv, TexSrv, GUI, Demo, OSD]}}.
+    Mods = modules(?DEMO),
+
+    {ok, {{one_for_one, 10, 1}, [CfgSrv, GUI, OSD] ++ Mods}}.
