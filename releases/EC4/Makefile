@@ -1,7 +1,7 @@
 DIR=../../lib/ecube-4.0/ebin
 REL=ecube
 PCAP=~/git/epcap/ebin
-EFLAGS=+K true +A 2 -noshell -pa $(DIR) -pa $(PCAP) -boot ecube
+EFLAGS=+K true +A 8 -noshell -pa $(DIR) -pa $(PCAP) -boot ecube
 
 
 all: $(REL).script $(REL).tar.gz

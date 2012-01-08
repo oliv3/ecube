@@ -100,9 +100,13 @@ make(Img, TexSize) ->
 		  Img#img.data;
 
 	      true ->
+		  %% Img0 = wxImage:new(Img#img.w, Img#img.h, Img#img.data, [{static_data, false}]),
 		  Img0 = wxImage:new(Img#img.w, Img#img.h, Img#img.data),
 		  Img1 = wxImage:scale(Img0, TexSize, TexSize),
-		  wxImage:getData(Img1)
+		  Data = wxImage:getData(Img1),
+		  wxImage:destroy(Img0),
+		  wxImage:destroy(Img1),
+		  Data
 	  end,
     gl:texImage2D(?GL_TEXTURE_2D, 0, Img#img.pf, TexSize, TexSize,
 		  0, Img#img.pf, Img#img.pt, Mem),
