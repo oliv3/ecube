@@ -12,8 +12,11 @@
 -behaviour(application).
 
 %% Application callbacks
--export([start/2]).
+-export([start/2, stop/1]).
 
 
 start(_Type, _StartArgs) ->
     ec_sup:start_link().
+
+stop(_State) ->
+    init:stop().

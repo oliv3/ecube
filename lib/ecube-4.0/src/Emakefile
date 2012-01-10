@@ -1,1 +1,1 @@
-{'*', [{i, "../../../../epcap/include"}, {d, d3bug}, {d, cloud}, {outdir, "../ebin"}, [debug_info, native]]}.
+{'*', [{d, d3bug}, {outdir, "../ebin"}, [debug_info, native]]}.
