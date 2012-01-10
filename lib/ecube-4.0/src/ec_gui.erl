@@ -69,7 +69,7 @@ unregister_textures(Pid) ->
 %% wx_object Callbacks
 %%====================================================================
 init(Parent) ->
-    %% process_flag(trap_exit, true),
+    process_flag(trap_exit, true),
     Size = ec:get_env(size),
     Wx = wx:new(),
     Frame = ec_win:new(Wx, Size),
@@ -137,9 +137,14 @@ loop(Parent, Debug, #state3{ifps=IFPS, gl=GL, textures=Texs} = State) ->
 	    Records = ets:lookup(Texs, Pid),
 	    ets:delete(Texs, Pid),
 	    Tids = [Tid || {_Pid, Tid} <- Records],
-	    ?D_F("freeing textures owned by pid ~p: ~p", [Pid, Tids]),
-	    wxGLCanvas:setCurrent(GL),
-	    gl:deleteTextures(Tids),
+	    case Tids of
+		[] ->
+		    ok;
+		Tids ->
+		    ?D_F("freeing textures owned by pid ~p: ~p", [Pid, Tids]),
+		    wxGLCanvas:setCurrent(GL),
+		    gl:deleteTextures(Tids)
+	    end,
 	    loop(Parent, Debug, State);
 
 	draw ->
