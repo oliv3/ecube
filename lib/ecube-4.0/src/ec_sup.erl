@@ -36,9 +36,12 @@ modules(biniou) ->
 
     [VolSrv, TexSrv, Demo];
 modules(_OtherDemo) ->
-    [].
+    Base = {ec_base, {ec_base, start_link, []},
+	    permanent, ?TIMEOUT, worker, [ec_base]},
+    [Base].
 
--define(DEMO, biniou).
+%%-define(DEMO, biniou).
+-define(DEMO, bare).
 
 init([]) ->
     CfgSrv = {ec_cf, {ec_cf, start_link, []},
