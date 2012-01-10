@@ -9,7 +9,7 @@
 
 -include("ec.hrl").
 
--export([draw/3]).
+-export([draw/3, cube/0]).
 
 -define(ROT_STEP, 0.31416).
 
@@ -17,6 +17,7 @@
 draw(TexSize, Splash, Texs) ->
     NewTexs = refresh_textures(TexSize, Splash, Texs, 0, tuple_size(Texs), []),
     draw_objects(NewTexs),
+    cube(),
     spin(ec_cf:opt(?O_SPIN)),
     NewTexs.
 
@@ -34,15 +35,16 @@ draw_objects(Texs) ->
 	true -> ec_objs:axes(Vol);
 	false -> ok
     end,
-    case ec_cf:opt(?O_EDGES) of
-	true -> ec_objs:cube(Vol);
-	false -> ok
-    end,
     case ec_cf:opt(?O_TEXT) of
 	true -> ec_objs:textured(Vol, Texs);
 	false -> ok
     end.
 
+cube() ->
+    case ec_cf:opt(?O_EDGES) of
+	true -> ec_objs:cube(1.0);
+	false -> ok
+    end.
 
 spin(true) ->
     {OldRX, OldRY, OldRZ} = ec_cf:rot(),
