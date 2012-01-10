@@ -34,7 +34,10 @@ modules(biniou) ->
     Demo = {ec_demo, {ec_demo, start_link, []},
 	    permanent, ?TIMEOUT, worker, [ec_demo]},
 
-    [VolSrv, TexSrv, Demo];
+    OSD = {ec_osd, {ec_osd, start_link, []},
+	   permanent, ?TIMEOUT, worker, [ec_osd]},
+
+    [VolSrv, TexSrv, Demo, OSD];
 modules(base) ->
     Base = {ec_base, {ec_base, start_link, []},
 	    permanent, ?TIMEOUT, worker, [ec_base]},
@@ -56,14 +59,11 @@ init([]) ->
     GUI = {ec_gui, {ec_gui, start_link, []},
 	   permanent, ?TIMEOUT, worker, [ec_gui]},
 
-    OSD = {ec_osd, {ec_osd, start_link, []},
-	   permanent, ?TIMEOUT, worker, [ec_osd]},
-
     %% PS = {ec_ps, {ec_ps, start_link, []},
     %%	  permanent, ?TIMEOUT, worker, [ec_ps]},
 
     Mods = modules(?DEMO),
-    Children = lists:flatten([CfgSrv, GUI, OSD, Mods]),
+    Children = lists:flatten([CfgSrv, GUI, Mods]),
     %% io:format("Children: ~p~n", [Children]),
 
     {ok, {{one_for_one, 10, 1}, Children}}.
