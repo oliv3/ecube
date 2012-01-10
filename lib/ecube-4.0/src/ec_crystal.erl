@@ -1,14 +1,13 @@
 %%%-------------------------------------------------------------------
-%%% File    : ec_pt3d.erl
+%%% File    : ec_crystal.erl
 %%% Author  : Olivier Girondel <olivier@biniou.info>
-%%% Description : Packard-Takens 3d reconstruction from sound
+%%% Description : Packard-Takens 7d reconstruction
 %%%-------------------------------------------------------------------
--module(ec_pt3d).
+-module(ec_crystal).
 -author('olivier@biniou.info').
 -vsn("1.0").
 
 -include("ec.hrl").
--include("ec_ps.hrl").
 
 -behaviour(gen_server).
 
@@ -23,21 +22,8 @@
 	 terminate/2, code_change/3]).
 
 -define(SERVER, ?MODULE).
--define(F32, 32/float-native).
-
--define(RATE,  4410).
-%%-define(RATE,  8000).
-%%-define(RATE,  44100).
-
--define(SPAN, 10).
-
--define(VELF, 3.0).
 
 -record(state, {rec, points=[]}).
-
-%% Minimum value a `signed short int' can hold.
--define(SHRT_MIN, -32768).
-%%-define(ISHRT_MIN, (1/?SHRT_MIN)).
 
 %%====================================================================
 %% API
@@ -56,11 +42,6 @@ init([]) ->
 
     Env = ec_gui:get_env(),
     wx:set_env(Env),
-
-    %% curve:start(), %% FIXME curve:stop() not called in terminate/2 ?!
-
-    rec:start(),
-    ok = rec:record(?RATE, ?SPAN),
 
     ec_gui:register(self()),
     {ok, #state{}}.
@@ -95,6 +76,7 @@ handle_cast({points, Points}, State) ->
 %%--------------------------------------------------------------------
 handle_info({Pid, Ref, {draw, GL}}, #state{points=Ps} = State) ->
     wxGLCanvas:setCurrent(GL),
+    %% io:format("[i] ~s:draw(~p)~n", [?MODULE, GL]),
     Res = draw(Ps),
     Pid ! {Ref, Res},
     {noreply, State};
@@ -112,8 +94,7 @@ handle_info(_Info, State) ->
 %%--------------------------------------------------------------------
 terminate(_Reason, _State) ->
     ?D_TERMINATE(_Reason),
-    %% curve:stop(),
-    rec:stop().
+    ok.
 
 %%--------------------------------------------------------------------
 %% Func: code_change(OldVsn, State, Extra) -> {ok, NewState}
@@ -140,8 +121,6 @@ draw(Points) ->
     gl:'begin'(?GL_LINE_STRIP),
     Draw = fun(P = {X, Y, Z}) ->
 		   C = {to_comp(X), to_comp(Y), to_comp(Z)},
-		   %% Vel = {X*?VELF, Y*?VELF, Z*?VELF},
-		   %% ec_ps:add(#part{pos=P, col=C, ttl=1.5*?MICRO, vel=Vel}),
 		   gl:color3fv(C),
 		   gl:vertex3fv(P)
 	   end,

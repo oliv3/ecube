@@ -38,11 +38,16 @@ modules(biniou) ->
 modules(base) ->
     Base = {ec_base, {ec_base, start_link, []},
 	    permanent, ?TIMEOUT, worker, [ec_base]},
-    [Base].
+    [Base];
+modules(crystal) ->
+    CRYSTAL = {ec_crystal, {ec_crystal, start_link, []},
+	    permanent, ?TIMEOUT, worker, [ec_crystal]},
+    [modules(base), CRYSTAL].
 
 
 %% -define(DEMO, biniou).
--define(DEMO, base).
+%% -define(DEMO, base).
+-define(DEMO, crystal).
 
 init([]) ->
     CfgSrv = {ec_cf, {ec_cf, start_link, []},
@@ -54,15 +59,12 @@ init([]) ->
     OSD = {ec_osd, {ec_osd, start_link, []},
 	   permanent, ?TIMEOUT, worker, [ec_osd]},
 
-    %%  PT3D = {ec_pt3d, {ec_pt3d, start_link, []},
-    %%	    permanent, ?TIMEOUT, worker, [ec_pt3d]},
-
-    %%  PS = {ec_ps, {ec_ps, start_link, []},
+    %% PS = {ec_ps, {ec_ps, start_link, []},
     %%	  permanent, ?TIMEOUT, worker, [ec_ps]},
 
     Mods = modules(?DEMO),
     Children = lists:flatten([CfgSrv, GUI, OSD, Mods]),
-    io:format("Children: ~p~n", [Children]),
+    %% io:format("Children: ~p~n", [Children]),
 
     {ok, {{one_for_one, 10, 1}, Children}}.
 

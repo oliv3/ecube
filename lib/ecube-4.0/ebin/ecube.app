@@ -7,10 +7,10 @@
 	 {modules, [ec_app, ec, ec_sup, ec_gui, ec_cf,
 		    ec_win, ec_gl, ec_demo, ec_vol, ec_tex,
 		    ec_objs, ec_cube, ec_biniou,
-		    wx_glfont, ec_osd, ec_pt3d, ec_ps, ec_base]},
+		    wx_glfont, ec_osd, ec_crystal, ec_ps, ec_base]},
 	 {registered, [ec_sup, ec_gui, ec_cf,
 		       ec_win, ec_gl, ec_demo, ec_vol, ec_tex, ec_osd,
-		       ec_pt3d, ec_ps, ec_base]},
+		       ec_crystal, ec_ps, ec_base]},
 	 {applications, [kernel, stdlib]},
 	 {env, [
 %%	       {fps, 60},
