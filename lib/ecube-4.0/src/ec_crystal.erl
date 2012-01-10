@@ -23,7 +23,7 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {rec, points=[]}).
+-record(state, {rec, points=test()}).
 
 %%====================================================================
 %% API
@@ -111,14 +111,15 @@ code_change(_OldVsn, State, _Extra) ->
 %% ouiiiii le max c'est 1.0 mais on estime que les composantes sont au
 %% 25% de l'espace possible
 to_comp(Val) ->
-    abs(Val) * 4.0.
+    abs(Val). %% * 4.0.
 
 
 draw([]) ->
     ok;
 draw(Points) ->
-    gl:lineWidth(2.0),
-    gl:'begin'(?GL_LINE_STRIP),
+    %% gl:lineWidth(2.0),
+    gl:pointSize(2.0),
+    gl:'begin'(?GL_POINTS), %% LINE_STRIP),
     Draw = fun(P = {X, Y, Z}) ->
 		   C = {to_comp(X), to_comp(Y), to_comp(Z)},
 		   gl:color3fv(C),
@@ -126,3 +127,16 @@ draw(Points) ->
 	   end,
     [Draw(P) || P <- Points],
     gl:'end'().
+
+
+%%
+%% Testing
+-define(N, 10).
+
+test() ->
+    Seq = fun(N) -> lists:seq(0, N) end,
+    NSeq = fun(N) -> lists:seq(N, 0, -1) end,
+    [{-1.0*norm(X),norm(Y),norm(Z)} || X<-Seq(?N), Y<-NSeq(?N), Z<-Seq(?N)].
+
+norm(X) ->
+    (X/?N)*2-1.
