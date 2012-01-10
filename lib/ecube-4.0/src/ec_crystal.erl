@@ -111,15 +111,15 @@ code_change(_OldVsn, State, _Extra) ->
 %% ouiiiii le max c'est 1.0 mais on estime que les composantes sont au
 %% 25% de l'espace possible
 to_comp(Val) ->
-    abs(Val). %% * 4.0.
+    abs(Val).
 
 
 draw([]) ->
     ok;
 draw(Points) ->
-    %% gl:lineWidth(2.0),
-    gl:pointSize(2.0),
-    gl:'begin'(?GL_POINTS), %% LINE_STRIP),
+    %% TODO: GLhint smooth points
+    gl:pointSize(4.0),
+    gl:'begin'(?GL_POINTS),
     Draw = fun(P = {X, Y, Z}) ->
 		   C = {to_comp(X), to_comp(Y), to_comp(Z)},
 		   gl:color3fv(C),
