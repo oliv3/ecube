@@ -43,9 +43,11 @@ modules(base) ->
 	    permanent, ?TIMEOUT, worker, [ec_base]},
     [Base];
 modules(crystal) ->
+    Rec = {ec_rec, {ec_rec, start_link, []},
+	   permanent, ?TIMEOUT, worker, [ec_rec]},
     CRYSTAL = {ec_crystal, {ec_crystal, start_link, []},
 	    permanent, ?TIMEOUT, worker, [ec_crystal]},
-    [modules(base), CRYSTAL].
+    [modules(base), Rec, CRYSTAL].
 
 
 %% -define(DEMO, biniou).
