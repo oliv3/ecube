@@ -68,14 +68,17 @@ stop(Pid) ->
 
 loop(#state{frame=Frame, port=Port} = State) ->
     receive
-	{Port, {data, Data}} ->
-	    loop(State#state{frame=Frame+1, data=Data})
-
+	{Pid, Ref, data} ->
+	    Pid ! {Ref, {Frame, State#state.data}},
+	    loop(State)
     after 0 ->
 	    receive
 		{Pid, Ref, data} ->
 		    Pid ! {Ref, {Frame, State#state.data}},
 		    loop(State);
+
+		{Port, {data, Data}} ->
+		    loop(State#state{frame=Frame+1, data=Data});
 
 		{'EXIT', Port, _Reason} ->
 		    ?D_F("~p exiting with reason: ~p", [Port, _Reason]);
@@ -83,11 +86,8 @@ loop(#state{frame=Frame, port=Port} = State) ->
 		stop ->
 		    stop_biniou(Port);
 
-        	{Port, {data, Data}} ->
-	            loop(State#state{frame=Frame+1, data=Data});
-
 		_Other ->
-                    stop_biniou(Port),
+		    stop_biniou(Port),
 		    ?D_UNHANDLED(_Other)
 	    end
     end.
