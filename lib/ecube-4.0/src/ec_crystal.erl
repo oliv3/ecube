@@ -40,8 +40,8 @@
 		delay = 1,
 		color = rgb, %% white|rgb|time
 		tup7 = erlang:make_tuple(7, 0.0),
-		ps = 1.0, %% point size
-		t = 1.0, %% MaxT for 4d mode
+		ps = 4.0, %% 1.0, %% point size
+		t = 1.0, %% MaxT for 4d mode [-1.0 ..1.0]
 		points = test() %% 7d points
 	       }).
 
@@ -98,14 +98,17 @@ handle_cast({clear}, State) ->
     {noreply, State#state{points=[]}};
 handle_cast({format, Sign, WS, Order}, State) ->
     {noreply, State#state{sign=Sign, ws=WS, order=Order}};
-handle_cast({feed, Bin0}, #state{ws=WS, delay=Delay, order=Order, sign=Sign, left=L, points=Points} = State) ->
+handle_cast({feed, Bin0}, #state{tup7=Tup7, ws=WS, delay=Delay,
+				 order=Order, sign=Sign, left=L,
+				 points=Points} = State) ->
     Bin = list_to_binary([L, Bin0]),
     Type = {Sign, Order},
     [Data, Left] = extract(WS, Bin, Type, Delay),
-    %% NewPoints = add(Data),
-    NewPoints = [],
+    %% io:format("Data= ~p~nLeft= ~p~n", [Data, Left]),
+    {NewTup7, NewPoints} = add(Data, Tup7),
+    %% NewPoints = [],
     {noreply, State#state{points=lists:flatten([Points,NewPoints]),
-			  left=Left}};
+			  left=Left, tup7=NewTup7}};
 handle_cast({delay, Delay}, State) ->
     {noreply, State#state{delay=Delay}}.
 
@@ -115,11 +118,11 @@ handle_cast({delay, Delay}, State) ->
 %%                                       {stop, Reason, State}
 %% Description: Handling all non call/cast messages
 %%--------------------------------------------------------------------
-handle_info({Pid, Ref, {draw, GL}}, #state{points=Points, dim=D, t=T} = State) ->
+handle_info({Pid, Ref, {draw, GL}}, #state{points=Points, dim=D, t=T, ps=PS} = State) ->
     wxGLCanvas:setCurrent(GL),
     %% io:format("[i] ~s:draw(~p)~n", [?MODULE, GL]),
     Points2 = filter(D, Points, T),
-    Res = draw(Points2),
+    Res = draw(Points2, PS),
     Pid ! {Ref, Res},
     {noreply, State};
 
@@ -148,24 +151,15 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 %%% Internal functions
 %%--------------------------------------------------------------------
-
-%% rescale dans [0.0..4.0] pour du glColor3fv
-%% ouiiiii le max c'est 1.0 mais on estime que les composantes sont au
-%% 25% de l'espace possible
-to_comp(Val) ->
-    abs(Val).
-
-
-draw([]) ->
+draw([], _PS) ->
     ok;
-draw(Points) ->
+draw(Points, PS) ->
     %% TODO: GLhint smooth points
-    gl:pointSize(4.0),
+    gl:pointSize(PS),
     gl:'begin'(?GL_POINTS),
-    Draw = fun(P = {X, Y, Z}) ->
-		   C = {to_comp(X), to_comp(Y), to_comp(Z)},
-		   gl:color3fv(C),
-		   gl:vertex3fv(P)
+    Draw = fun({X, Y, Z, _T, R, G, B}) ->
+		   gl:color3f(R, G, B),
+		   gl:vertex3f(X, Y, Z)
 	   end,
     [Draw(P) || P <- Points],
     gl:'end'().
@@ -201,7 +195,8 @@ uu2su(V) ->
 test() ->
     Seq = fun(N) -> lists:seq(0, N) end,
     NSeq = fun(N) -> lists:seq(N, 0, -1) end,
-    [{-1.0*norm(X),norm(Y),norm(Z)} || X<-Seq(?N), Y<-NSeq(?N), Z<-Seq(?N)].
+    [{-1.0*norm(X),norm(Y),norm(Z),1.0,
+      su2uu(norm(X)),su2uu(norm(Y)),su2uu(norm(Z))} || X<-Seq(?N), Y<-NSeq(?N), Z<-Seq(?N)].
 
 norm(X) ->
     (X/?N)*2-1.
@@ -228,17 +223,24 @@ val(Val, WS, {unsigned, Order}) ->
     Unit = Unsigned/Max,
     uu2su(Unit).
 
-%% umax(8) ->
-%%     256;
+umax(8) ->
+    256;
 umax(16) ->
     256*256.
 
 
-%% add(_Values) ->
-%%     todo.
+add(Values, Tup7) when is_list(Values) ->
+    add(Values, Tup7, []);
+add(Val, {_T1,T2,T3,T4,T5,T6,T7}) ->
+    {T2,T3,T4,T5,T6,T7,Val}.
+add([], Tup7, Acc) ->
+    {Tup7, lists:reverse(Acc)};
+add([Val|Values], Tup7, Acc) ->
+    NewTup7 = {X,Y,Z,T,R,G,B} = add(Val, Tup7),
+    Point = {X,Y,Z,T,su2uu(R),su2uu(G),su2uu(B)},
+    add(Values, NewTup7, [Point|Acc]).
 
-%% add(Val, {T1,T2,T3,T4,T5,T6,T7} = Tuple) ->
-%%     {T2,T3,T4,T5,T6,T7,Val}.
+
 
 %% type(little, signed) ->
 %%     little-signed-integer;

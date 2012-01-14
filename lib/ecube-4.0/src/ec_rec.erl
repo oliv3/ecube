@@ -90,7 +90,8 @@ handle_call(_Request, _From, State) ->
 %%--------------------------------------------------------------------
 handle_cast({start}, #state{port=undefined} = State) ->
     Port = rec(),
-    ec_crystal:format(signed, 16, little),
+    %% ec_crystal:format(signed, 16, little),
+    ec_crystal:format(unsigned, 8, little),
     {noreply, State#state{port=Port}};
 
 handle_cast({stop}, #state{port=Port} = State) ->
@@ -143,5 +144,6 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 rec() ->
     %% TODO: switch buffer size
-    Cmd = "arecord -f cd 2> /dev/null",
+    %% Cmd = "arecord -f cd 2> /dev/null",
+    Cmd = "arecord -c2 -r44100 2> /dev/null",
     open_port({spawn, Cmd}, [stream, binary]).
