@@ -39,6 +39,8 @@ init(Parent) ->
     ec_gui:register(Self),
     Debug = sys:debug_options([]),
     TS = ec:get_env(tex_size),
+    ec_cf:enable(?O_TEXT),
+    ec_cf:enable(?O_MUTE),
     proc_lib:init_ack(Parent, {ok, Self}),
     loop(Parent, Debug, #state{tex_size=TS}).
 

@@ -34,14 +34,15 @@ modules(biniou) ->
     Demo = {ec_demo, {ec_demo, start_link, []},
 	    permanent, ?TIMEOUT, worker, [ec_demo]},
 
-    OSD = {ec_osd, {ec_osd, start_link, []},
-	   permanent, ?TIMEOUT, worker, [ec_osd]},
-
-    [VolSrv, TexSrv, Demo, OSD];
+    [VolSrv, TexSrv, Demo];
 modules(base) ->
     Base = {ec_base, {ec_base, start_link, []},
 	    permanent, ?TIMEOUT, worker, [ec_base]},
-    [Base];
+
+    OSD = {ec_osd, {ec_osd, start_link, []},
+	   permanent, ?TIMEOUT, worker, [ec_osd]},
+
+    [Base, OSD];
 modules(crystal) ->
     Rec = {ec_rec, {ec_rec, start_link, []},
 	   permanent, ?TIMEOUT, worker, [ec_rec]},

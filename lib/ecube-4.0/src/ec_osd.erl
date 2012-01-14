@@ -11,18 +11,20 @@
 
 %% API
 -export([start_link/0]).
+-export([message/1, message/2]).
 
 %% Callbacks
 -export([init/1, system_continue/3]).
 
 -define(SERVER, ?MODULE).
 
+-define(OSD_MSG_DELAY, 1000).
+
 -define(PTSIZE, 10).
 %%-define(OFFSET, 5.0).
--define(ON,     {0, 255, 0}).
--define(OFF,    {150, 150, 150}).
+-define(ON,     {0, 255, 127}).
 
--record(state, {texth, labels}).
+-record(state, {texth, labels, msg}).
 
 %%====================================================================
 %% API
@@ -30,6 +32,10 @@
 start_link() ->
     proc_lib:start_link(?MODULE, init, [self()]).
 
+message(Msg) when is_list(Msg) ->
+    message(Msg, ?OSD_MSG_DELAY).
+message(Msg, Delay) when is_list(Msg), is_integer(Delay) ->
+    ?SERVER ! {message, Msg, Delay}.
 
 %%====================================================================
 %% Callbacks
@@ -83,6 +89,19 @@ loop(Parent, Debug, State) ->
 	    ?D_F("code v1 system message(2): From ~p Request: ~p", [From, Request]),
             sys:handle_system_msg(Request, From, Parent, ?MODULE, Debug, State);
 
+	{message, Msg, Delay} ->
+	    Ref = make_ref(),
+	    erlang:send_after(Delay, ?MODULE, {remove, Ref}),
+	    loop(Parent, Debug, State#state{msg={Ref,Msg}});
+
+	{remove, Ref} ->
+	    case State#state.msg of
+		{Ref, _Msg} ->
+		    loop(Parent, Debug, State#state{msg=undefined});
+		_Other ->
+		    loop(Parent, Debug, State)
+	    end;
+
 	_Other ->
 	    ?D_UNHANDLED(_Other),
 	    loop(Parent, Debug, State)
@@ -99,8 +118,10 @@ osd(GL, State) ->
 
 osd(false, _GL, _State) ->
     ok;
-osd(true, GL, #state{texth=TextH, labels=Labels}) ->
+osd(true, GL, #state{texth=TextH, labels=Labels, msg=Msg}) ->
     wxGLCanvas:setCurrent(GL),
+
+    %% TODO: display (centered, yellow, big) OSD message
 
     gl:enable(?GL_COLOR_MATERIAL), %% necessary ?
 
@@ -117,9 +138,12 @@ osd(true, GL, #state{texth=TextH, labels=Labels}) ->
     gl:matrixMode(?GL_MODELVIEW),
     gl:pushMatrix(),
     gl:loadIdentity(),
-    gl:translatef(TextH, H-TextH, 0.0),
 
+    gl:translatef(TextH, H-TextH, 0.0),
     draw_labels(TextH, Labels),
+
+    gl:loadIdentity(),
+    draw_msg(Msg),
 
     gl:popMatrix(),
     gl:matrixMode(?GL_PROJECTION),
@@ -159,17 +183,21 @@ desc(?O_MUTE) ->
 draw_labels(TextH, Dict) ->
     draw_labels(?ALL_OPTIONS, TextH, Dict).
 
+
 draw_labels([], _TextH, _Dict) ->
     ok;
 draw_labels([Opt|Opts], TextH, Dict) ->
-    gl:translatef(0.0, -TextH, 0.0),
-    Color = case ec_cf:opt(Opt) of
-		true ->
-		    ?ON;
-		false ->
-		    ?OFF
-	    end,
-    gl:color3ubv(Color),
-    List = dict:fetch(Opt, Dict),
-    gl:callList(List),
+    case ec_cf:opt(Opt) of
+	false ->
+	    ok;
+	true ->
+	    gl:translatef(0.0, -TextH, 0.0),
+	    gl:color3ubv(?ON),
+	    List = dict:fetch(Opt, Dict),
+	    gl:callList(List)
+    end,
     draw_labels(Opts, TextH, Dict).
+
+
+draw_msg(undefined) ->
+    ok.

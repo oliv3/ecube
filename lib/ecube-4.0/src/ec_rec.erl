@@ -9,28 +9,23 @@
 
 %% API
 -export([start_link/0]).
--export([record/0, record/3, stop/0]).
+-export([start/0, stop/0]).
 
 %% gen_server callbacks
--export([init/1, handle_call/3, handle_cast/2, handle_info/2,
+-export([init/1,
+	 handle_call/3,
+	 handle_cast/2, handle_info/2,
 	 terminate/2, code_change/3]).
 
 -define(SERVER, ?MODULE). 
 
--define(FREQ,  44100).
--define(WSIZE, 2).
--define(MODE,  stereo). %% |mono
-
--record(state, {port, freq=?FREQ, wsize=?WSIZE, mode=?MODE}).
+-record(state, {port}).
 
 %%%===================================================================
 %%% API
 %%%===================================================================
-record() ->
-    record(?FREQ, ?WSIZE, ?MODE).
-
-record(Freq, Wsize, Mode) ->
-    gen_server:cast(?SERVER, {record, Freq, Wsize, Mode}).
+start() ->
+    gen_server:cast(?SERVER, {start}).
 
 stop() ->
     gen_server:cast(?SERVER, {stop}).
@@ -77,9 +72,11 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+%% handle_call(_Request, _From, State) ->
+%%     Reply = ok,
+%%     {reply, Reply, State}.
 handle_call(_Request, _From, State) ->
-    Reply = ok,
-    {reply, Reply, State}.
+    {stop, internal_error, State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -91,12 +88,14 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_cast({start}, #state{port=undefined} = State) ->
+    Port = rec(),
+    ec_crystal:format(signed, 16, little),
+    {noreply, State#state{port=Port}};
+
 handle_cast({stop}, #state{port=Port} = State) ->
     port_close(Port),
-    {noreply, State#state{port=undefined}};
-handle_cast({record, Freq, WordSize, Mode}, #state{port=undefined} = State) ->
-    Port = rec(Freq, WordSize, Mode),
-    {noreply, State#state{port=Port}}.
+    {noreply, State#state{port=undefined}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -108,7 +107,10 @@ handle_cast({record, Freq, WordSize, Mode}, #state{port=undefined} = State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info(_Info, State) ->
+handle_info({Port, {data, Bin}}, #state{port=Port} = State) ->
+    %% io:format("~s: got ~p bytes~n", [?MODULE, size(Bin)]),
+    ec_crystal:clear(),
+    ec_crystal:feed(Bin),
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -139,5 +141,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
-rec(Freq, WordSize, Mode) ->
-    ok.
+rec() ->
+    %% TODO: switch buffer size
+    Cmd = "arecord -f cd 2> /dev/null",
+    open_port({spawn, Cmd}, [stream, binary]).

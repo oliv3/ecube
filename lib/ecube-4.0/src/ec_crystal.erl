@@ -11,11 +11,19 @@
 
 -behaviour(gen_server).
 
+%% For tests
+-compile(export_all).
+
 %% API
 -export([start_link/0]).
 
 %% Module API
--export([points/1]).
+-export([format/3, delay/1]).
+-export([clear/0, feed/1]).
+
+%% For EUnit
+-export([is_su/1, is_uu/1]).
+-export([su2uu/1, uu2su/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -23,7 +31,18 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {rec, points=test()}).
+-record(state, {rec, %% recorder port
+		left = <<>>, %% binary left from previous run
+		dim = 3, %% 3|4
+		ws = 8, %% word size (multiple of 8 for now)
+		sign = unsigned,
+		order = big, %% big|little
+		delay = 1,
+		color = rgb, %% white|rgb|time
+		tup7 = erlang:make_tuple(7, 0.0),
+		ps = 1.0, %% point size
+		points = test() %% 7d points
+	       }).
 
 %%====================================================================
 %% API
@@ -31,8 +50,17 @@
 start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
-points(Points) ->
-    gen_server:cast(?SERVER, {points, Points}).
+format(Sign, WordSize, Order) ->
+    gen_server:cast(?SERVER, {format, Sign, WordSize, Order}).
+
+feed(Bin) when is_binary(Bin) ->
+    gen_server:cast(?SERVER, {feed, Bin}).
+
+delay(Delay) when is_integer(Delay) andalso Delay > 0 ->
+    gen_server:cast(?SERVER, {delay, Delay}).
+
+clear() ->
+    gen_server:cast(?MODULE, {clear}).
 
 %%====================================================================
 %% gen_server callbacks
@@ -65,8 +93,20 @@ handle_call(_Request, _From, State) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
-handle_cast({points, Points}, State) ->
-    {noreply, State#state{points=Points}}.
+handle_cast({clear}, State) ->
+    {noreply, State#state{points=[]}};
+handle_cast({format, Sign, WS, Order}, State) ->
+    {noreply, State#state{sign=Sign, ws=WS, order=Order}};
+handle_cast({feed, Bin0}, #state{ws=WS, delay=Delay, order=Order, sign=Sign, left=L, points=Points} = State) ->
+    Bin = list_to_binary([L, Bin0]),
+    Type = {Order, Sign},
+    [Data, Left] = extract(WS, Bin, Type, Delay),
+    %% NewPoints = add(Data),
+    NewPoints = [],
+    {noreply, State#state{points=lists:flatten([Points,NewPoints]),
+			  left=Left}};
+handle_cast({delay, Delay}, State) ->
+    {noreply, State#state{delay=Delay}}.
 
 %%--------------------------------------------------------------------
 %% Function: handle_info(Info, State) -> {noreply, State} |
@@ -74,10 +114,10 @@ handle_cast({points, Points}, State) ->
 %%                                       {stop, Reason, State}
 %% Description: Handling all non call/cast messages
 %%--------------------------------------------------------------------
-handle_info({Pid, Ref, {draw, GL}}, #state{points=Ps} = State) ->
+handle_info({Pid, Ref, {draw, GL}}, #state{points=Points} = State) ->
     wxGLCanvas:setCurrent(GL),
     %% io:format("[i] ~s:draw(~p)~n", [?MODULE, GL]),
-    Res = draw(Ps),
+    Res = draw(Points),
     Pid ! {Ref, Res},
     {noreply, State};
 
@@ -128,6 +168,29 @@ draw(Points) ->
     [Draw(P) || P <- Points],
     gl:'end'().
 
+%% su: signed unit [-1.0 .. +1.0]
+is_su(V) when is_float(V), V >= -1.0 andalso V =< 1.0 ->
+    true;
+is_su(V) when is_float(V) ->
+    false;
+is_su(_) ->
+    throw(badarg).
+
+
+%% uu: unsigned unit [0.0 .. +1.0]
+is_uu(V) when is_float(V), V >= 0.0 andalso V =< 1.0 ->
+    true;
+is_uu(V) when is_float(V) ->
+    false;
+is_uu(_) ->
+    throw(badarg).
+
+%% su -> uu
+su2uu(V) ->
+    (V+1)/2.
+%% uu -> su
+uu2su(V) ->
+    (V*2)-1.0.
 
 %%
 %% Testing
@@ -140,3 +203,37 @@ test() ->
 
 norm(X) ->
     (X/?N)*2-1.
+
+
+extract(WS, Bin, Type, Delay) ->
+    extract(WS, Bin, Type, Delay, []).
+extract(_WS, <<>>, _Type, _Delay, Points) ->
+    [lists:reverse(Points), <<>>];
+extract(WS, Bin, Type, Delay, Acc) ->
+    <<Val:WS/bits, Rest/binary>> = Bin,
+    %% io:format("Val= ~p~n", [Val]),
+    %% NewBin = shift(WS, Delay, Bin),
+    Value = 0.0, %% val(Val, Type), %% * 0.0, %% TODO
+    extract(8, Rest, Type, Delay, [Value|Acc]).
+
+%% XXX only valid for multiples of 8
+umax(8) ->
+    16#ff;
+umax(WS) when is_integer(WS) ->
+    16#ff * umax(WS-8).
+
+
+%% add(_Values) ->
+%%     todo.
+
+%% add(Val, {T1,T2,T3,T4,T5,T6,T7} = Tuple) ->
+%%     {T2,T3,T4,T5,T6,T7,Val}.
+
+%% type(little, signed) ->
+%%     little-signed-integer;
+%% type(little, unsigned) ->
+%%     little-unsigned-integer;
+%% type(big, signed) ->
+%%     big-signed-integer;
+%% type(big, unsigned) ->
+%%     big-unsigned-integer.
