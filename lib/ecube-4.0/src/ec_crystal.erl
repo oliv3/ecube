@@ -41,6 +41,7 @@
 		color = rgb, %% white|rgb|time
 		tup7 = erlang:make_tuple(7, 0.0),
 		ps = 1.0, %% point size
+		t = 1.0, %% MaxT for 4d mode
 		points = test() %% 7d points
 	       }).
 
@@ -114,10 +115,11 @@ handle_cast({delay, Delay}, State) ->
 %%                                       {stop, Reason, State}
 %% Description: Handling all non call/cast messages
 %%--------------------------------------------------------------------
-handle_info({Pid, Ref, {draw, GL}}, #state{points=Points} = State) ->
+handle_info({Pid, Ref, {draw, GL}}, #state{points=Points, dim=D, t=T} = State) ->
     wxGLCanvas:setCurrent(GL),
     %% io:format("[i] ~s:draw(~p)~n", [?MODULE, GL]),
-    Res = draw(Points),
+    Points2 = filter(D, Points, T),
+    Res = draw(Points2),
     Pid ! {Ref, Res},
     {noreply, State};
 
@@ -246,3 +248,9 @@ umax(16) ->
 %%     big-signed-integer;
 %% type(big, unsigned) ->
 %%     big-unsigned-integer.
+
+filter(3, Points, _MaxT) ->
+    Points;
+filter(4, Points, MaxT) ->
+    [P || P = {_X, _Y, _Z, T,
+	       _R, _G, _B} <- Points, T =< MaxT].
