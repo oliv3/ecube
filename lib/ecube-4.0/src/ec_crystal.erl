@@ -99,7 +99,7 @@ handle_cast({format, Sign, WS, Order}, State) ->
     {noreply, State#state{sign=Sign, ws=WS, order=Order}};
 handle_cast({feed, Bin0}, #state{ws=WS, delay=Delay, order=Order, sign=Sign, left=L, points=Points} = State) ->
     Bin = list_to_binary([L, Bin0]),
-    Type = {Order, Sign},
+    Type = {Sign, Order},
     [Data, Left] = extract(WS, Bin, Type, Delay),
     %% NewPoints = add(Data),
     NewPoints = [],
@@ -213,14 +213,23 @@ extract(WS, Bin, Type, Delay, Acc) ->
     <<Val:WS/bits, Rest/binary>> = Bin,
     %% io:format("Val= ~p~n", [Val]),
     %% NewBin = shift(WS, Delay, Bin),
-    Value = 0.0, %% val(Val, Type), %% * 0.0, %% TODO
-    extract(8, Rest, Type, Delay, [Value|Acc]).
+    Value =  val(Val, WS, Type),
+    extract(WS, Rest, Type, Delay, [Value|Acc]).
 
-%% XXX only valid for multiples of 8
-umax(8) ->
-    16#ff;
-umax(WS) when is_integer(WS) ->
-    16#ff * umax(WS-8).
+val(Val, WS, {signed, Order}) ->
+    Max = umax(WS) bsr 1,
+    Unsigned = binary:decode_unsigned(Val, Order),
+    (Unsigned - Max) / -Max;
+val(Val, WS, {unsigned, Order}) ->
+    Max = umax(WS),
+    Unsigned = binary:decode_unsigned(Val, Order),
+    Unit = Unsigned/Max,
+    uu2su(Unit).
+
+%% umax(8) ->
+%%     256;
+umax(16) ->
+    256*256.
 
 
 %% add(_Values) ->
