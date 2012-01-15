@@ -24,7 +24,7 @@
 -define(PTSIZE, 10).
 -define(ON,     {0, 255, 127}).
 
--record(state, {texth, labels, msg, msg_font}).
+-record(state, {texth, labels, msg, msg_font, msg_font_b}).
 
 %%====================================================================
 %% API
@@ -55,7 +55,7 @@ init(Parent) ->
 
 
 %% Initialization step, kinda like gen_server:init/1
-loop(Parent, Debug, #state{labels=undefined, msg_font=undefined} = State) ->
+loop(Parent, Debug, #state{labels=undefined, msg_font=undefined, msg_font_b=undefined} = State) ->
     receive
 	{Pid, Ref, {draw, GL}} ->
 	    wxGLCanvas:setCurrent(GL),
@@ -69,8 +69,12 @@ loop(Parent, Debug, #state{labels=undefined, msg_font=undefined} = State) ->
 				  ?wxFONTWEIGHT_NORMAL),
 	    {ok, MsgGLFixed} = wx_glfont:load_font(MsgFixed, []),
 
+	    MsgFixedB = wxFont:new(?OSD_MSG_PTSIZE, ?wxFONTFAMILY_MODERN, ?wxFONTSTYLE_NORMAL,
+				   ?wxFONTWEIGHT_BOLD),
+	    {ok, MsgGLFixedB} = wx_glfont:load_font(MsgFixedB, []),
+
 	    NewState = State#state{texth=TextH, labels=Labels,
-				   msg_font=MsgGLFixed},
+				   msg_font=MsgGLFixed, msg_font_b=MsgGLFixedB},
 	    Pid ! {Ref, osd(GL, NewState)},
 	    loop(Parent, Debug, NewState);
 	
@@ -127,7 +131,7 @@ osd(GL, State) ->
 osd(false, _GL, _State) ->
     ok;
 osd(true, GL, #state{texth=TextH, labels=Labels, msg=Msg,
-		     msg_font=MsgFont}) ->
+		     msg_font=MsgFont, msg_font_b=MsgFontB}) ->
     wxGLCanvas:setCurrent(GL),
 
     %% TODO: display (centered, yellow, big) OSD message
@@ -151,8 +155,7 @@ osd(true, GL, #state{texth=TextH, labels=Labels, msg=Msg,
     gl:translatef(TextH, H-TextH, 0.0),
     draw_labels(TextH, Labels),
 
-    gl:loadIdentity(),
-    draw_msg(Msg, MsgFont),
+    draw_msg(Msg, MsgFont, MsgFontB),
 
     gl:popMatrix(),
     gl:matrixMode(?GL_PROJECTION),
@@ -208,19 +211,28 @@ draw_labels([Opt|Opts], TextH, Dict) ->
     draw_labels(Opts, TextH, Dict).
 
 
-draw_msg(undefined, _Font) ->
+draw_msg(undefined, _Font, _FontB) ->
     ok;
-draw_msg({_Ref, Msg}, Font) ->
-    %% io:format("GLCanvas size: ~p~n", [ec_win:size()]),
+draw_msg({_Ref, Msg}, Font, FontB) ->
+    gl:loadIdentity(),
     {W, H} = ec_win:size(),
+
+    {MWB, MHB} = wx_glfont:text_size(FontB, Msg),
+    TXB = (W bsr 1) - MWB/2,
+    TYB = (H bsr 1) - MHB/2,
+    gl:translatef(TXB, TYB, 0.0),
+    gl:color3ub(255, 255, 255),
+    wx_glfont:render(FontB, Msg),
+
     {MW, MH} = wx_glfont:text_size(Font, Msg),
-    %% io:format("Msg size: ~p ~p~n", [MW, MH]),
     TX = (W bsr 1) - MW/2,
     TY = (H bsr 1) - MH/2,
+    gl:loadIdentity(),
     gl:translatef(TX, TY, 0.0),
     gl:color3ub(255, 255, 0),
-    wx_glfont:render(Font, Msg).
+    wx_glfont:render(Font, Msg),
 
+    gl:loadIdentity().
 
 test() ->
     message("w00t !").
