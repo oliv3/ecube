@@ -12,19 +12,19 @@
 %% API
 -export([start_link/0]).
 -export([message/1, message/2]).
+-export([test/0]).
 
 %% Callbacks
 -export([init/1, system_continue/3]).
 
 -define(SERVER, ?MODULE).
 
--define(OSD_MSG_DELAY, 1000).
-
+-define(OSD_MSG_DELAY, 3000).
+-define(OSD_MSG_PTSIZE, 50).
 -define(PTSIZE, 10).
-%%-define(OFFSET, 5.0).
 -define(ON,     {0, 255, 127}).
 
--record(state, {texth, labels, msg}).
+-record(state, {texth, labels, msg, msg_font}).
 
 %%====================================================================
 %% API
@@ -54,7 +54,8 @@ init(Parent) ->
     loop(Parent, Debug, #state{}).
 
 
-loop(Parent, Debug, #state{labels=undefined} = State) ->
+%% Initialization step, kinda like gen_server:init/1
+loop(Parent, Debug, #state{labels=undefined, msg_font=undefined} = State) ->
     receive
 	{Pid, Ref, {draw, GL}} ->
 	    wxGLCanvas:setCurrent(GL),
@@ -63,7 +64,12 @@ loop(Parent, Debug, #state{labels=undefined} = State) ->
 	    {ok, GLFixed} = wx_glfont:load_font(Fixed, []),
 	    TextH = float(wx_glfont:height(GLFixed)),
 	    Labels = build_labels(GLFixed),
-	    NewState = State#state{texth=TextH, labels=Labels},
+
+	    MsgFixed = wxFont:new(?OSD_MSG_PTSIZE, ?wxFONTFAMILY_MODERN, ?wxFONTSTYLE_NORMAL,
+				  ?wxFONTWEIGHT_NORMAL),
+	    {ok, MsgGLFixed} = wx_glfont:load_font(MsgFixed, []),
+
+	    NewState = State#state{texth=TextH, labels=Labels, msg_font=MsgGLFixed},
 	    Pid ! {Ref, osd(GL, NewState)},
 	    loop(Parent, Debug, NewState);
 	
@@ -75,8 +81,22 @@ loop(Parent, Debug, #state{labels=undefined} = State) ->
 	    ?D_UNHANDLED(_Other),
 	    loop(Parent, Debug, State)
     end;
+%% Main loop
 loop(Parent, Debug, State) ->
     receive
+	{remove, Ref} ->
+	    case State#state.msg of
+		{Ref, _Msg} ->
+		    loop(Parent, Debug, State#state{msg=undefined});
+		_Other ->
+		    loop(Parent, Debug, State)
+	    end;
+
+	{message, Msg, Delay} ->
+	    Ref = make_ref(),
+	    erlang:send_after(Delay, ?MODULE, {remove, Ref}),
+	    loop(Parent, Debug, State#state{msg={Ref,Msg}});
+
 	{Pid, Ref, {draw, GL}} ->
 	    Pid ! {Ref, osd(GL, State)},
 	    loop(Parent, Debug, State);
@@ -88,19 +108,6 @@ loop(Parent, Debug, State) ->
  	{system, From, Request} ->
 	    ?D_F("code v1 system message(2): From ~p Request: ~p", [From, Request]),
             sys:handle_system_msg(Request, From, Parent, ?MODULE, Debug, State);
-
-	{message, Msg, Delay} ->
-	    Ref = make_ref(),
-	    erlang:send_after(Delay, ?MODULE, {remove, Ref}),
-	    loop(Parent, Debug, State#state{msg={Ref,Msg}});
-
-	{remove, Ref} ->
-	    case State#state.msg of
-		{Ref, _Msg} ->
-		    loop(Parent, Debug, State#state{msg=undefined});
-		_Other ->
-		    loop(Parent, Debug, State)
-	    end;
 
 	_Other ->
 	    ?D_UNHANDLED(_Other),
@@ -118,7 +125,7 @@ osd(GL, State) ->
 
 osd(false, _GL, _State) ->
     ok;
-osd(true, GL, #state{texth=TextH, labels=Labels, msg=Msg}) ->
+osd(true, GL, #state{texth=TextH, labels=Labels, msg=Msg, msg_font=MsgFont}) ->
     wxGLCanvas:setCurrent(GL),
 
     %% TODO: display (centered, yellow, big) OSD message
@@ -143,7 +150,7 @@ osd(true, GL, #state{texth=TextH, labels=Labels, msg=Msg}) ->
     draw_labels(TextH, Labels),
 
     gl:loadIdentity(),
-    draw_msg(Msg),
+    draw_msg(Msg, MsgFont),
 
     gl:popMatrix(),
     gl:matrixMode(?GL_PROJECTION),
@@ -199,5 +206,14 @@ draw_labels([Opt|Opts], TextH, Dict) ->
     draw_labels(Opts, TextH, Dict).
 
 
-draw_msg(undefined) ->
-    ok.
+draw_msg(undefined, _Font) ->
+    ok;
+draw_msg({_Ref, Msg}, Font) ->
+    %% TextH = float(wx_glfont:height(GLFixed)),
+    %% gl:translatef(0.0, -TextH, 0.0),
+    gl:color3ub(255, 255, 0),
+    wx_glfont:render(Font, Msg).
+
+
+test() ->
+    message("w00t !").
