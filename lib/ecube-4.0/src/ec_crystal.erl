@@ -209,13 +209,13 @@ uu2su(V) ->
 
 %%
 %% Testing
--define(N, 10).
+-define(N, 8).
 
 test() ->
     Seq = fun(N) -> lists:seq(0, N) end,
     NSeq = fun(N) -> lists:seq(N, 0, -1) end,
     [{-1.0*norm(X),norm(Y),norm(Z),1.0,
-      su2uu(norm(X)),su2uu(norm(Y)),su2uu(norm(Z))} || X<-Seq(?N), Y<-NSeq(?N), Z<-Seq(?N)].
+      su2uu(norm(Y)),su2uu(norm(Z)),su2uu(norm(X))} || X<-Seq(?N), Y<-NSeq(?N), Z<-Seq(?N)].
 
 norm(X) ->
     (X/?N)*2-1.
