@@ -20,6 +20,7 @@
 %% Module API
 -export([format/3, delay/1]).
 -export([clear/0, feed/1]).
+-export([size/0]).
 
 %% For EUnit
 -export([is_su/1, is_uu/1]).
@@ -63,6 +64,9 @@ delay(Delay) when is_integer(Delay) andalso Delay > 0 ->
 clear() ->
     gen_server:cast(?MODULE, {clear}).
 
+size() ->
+    gen_server:call(?MODULE, {size}).
+
 %%====================================================================
 %% gen_server callbacks
 %%====================================================================
@@ -84,8 +88,8 @@ init([]) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
-handle_call(_Request, _From, State) ->
-    Reply = ok,
+handle_call({size}, _From, #state{points=Points} = State) ->
+    Reply = length(Points),
     {reply, Reply, State}.
 
 %%--------------------------------------------------------------------
@@ -156,7 +160,8 @@ draw([], _PS) ->
 draw(Points, PS) ->
     %% TODO: GLhint smooth points
     gl:pointSize(PS),
-    gl:'begin'(?GL_POINTS),
+    %% gl:'begin'(?GL_POINTS),
+    gl:'begin'(?GL_LINE_STRIP),
     Draw = fun({X, Y, Z, _T, R, G, B}) ->
 		   gl:color3f(R, G, B),
 		   gl:vertex3f(X, Y, Z)
@@ -204,14 +209,26 @@ norm(X) ->
 
 extract(WS, Bin, Type, Delay) ->
     extract(WS, Bin, Type, Delay, []).
-extract(_WS, <<>>, _Type, _Delay, Points) ->
-    [lists:reverse(Points), <<>>];
+extract(_WS, {left, Bin}, _Type, _Delay, Points) ->
+    [lists:reverse(Points), Bin];
 extract(WS, Bin, Type, Delay, Acc) ->
-    <<Val:WS/bits, Rest/binary>> = Bin,
+    <<Val:WS/bits, _Rest/binary>> = Bin,
     %% io:format("Val= ~p~n", [Val]),
-    %% NewBin = shift(WS, Delay, Bin),
+    NewBin = shift(WS, Delay, Bin),
     Value =  val(Val, WS, Type),
-    extract(WS, Rest, Type, Delay, [Value|Acc]).
+    extract(WS, NewBin, Type, Delay, [Value|Acc]).
+
+
+shift(WS, Delay, Bin) ->
+    Bits = WS*Delay,
+    if
+	size(Bin) >= Bits ->
+	    <<_Skip:Bits/bits, Rest/binary>> = Bin,
+	    Rest;
+	true ->
+	    {left, Bin}
+    end.
+
 
 val(Val, WS, {signed, Order}) ->
     Max = umax(WS) bsr 1,
