@@ -122,11 +122,13 @@ handle_cast({delay, Delay}, State) ->
 %%                                       {stop, Reason, State}
 %% Description: Handling all non call/cast messages
 %%--------------------------------------------------------------------
-handle_info({Pid, Ref, {draw, GL}}, #state{points=Points, dim=D, t=T, ps=PS} = State) ->
+handle_info({Pid, Ref, {draw, GL}}, #state{color=ColorFn, points=Points,
+					   dim=D, t=T, ps=PS} = State) ->
     wxGLCanvas:setCurrent(GL),
     %% io:format("[i] ~s:draw(~p)~n", [?MODULE, GL]),
     Points2 = filter(D, Points, T),
-    Res = draw(Points2, PS),
+    Fun = fun(X) -> ?MODULE:ColorFn(X) end,
+    Res = draw(Points2, PS, Fun),
     Pid ! {Ref, Res},
     {noreply, State};
 
@@ -155,18 +157,30 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 %%% Internal functions
 %%--------------------------------------------------------------------
-draw([], _PS) ->
+rgb({X, Y, Z, _T, R, G, B}) ->
+    gl:color3f(R, G, B),
+    gl:vertex3f(X, Y, Z).
+
+time({X, Y, Z, _T, _R0, _G0, _B0}) ->
+    {R, G, B} = now(),
+    R1 = R rem 256,
+    G1 = G rem 256,
+    B1 = B rem 256,
+    gl:color3ub(R1, G1, B1),
+    gl:vertex3f(X, Y, Z).
+
+white({X, Y, Z, _T, _R, _G, _B}) ->
+    gl:color3ub(255, 255, 255),
+    gl:vertex3f(X, Y, Z).
+
+draw([], _PS, _DrawFn) ->
     ok;
-draw(Points, PS) ->
+draw(Points, PS, DrawFn) ->
     %% TODO: GLhint smooth points
     gl:pointSize(PS),
     %% gl:'begin'(?GL_POINTS),
     gl:'begin'(?GL_LINE_STRIP),
-    Draw = fun({X, Y, Z, _T, R, G, B}) ->
-		   gl:color3f(R, G, B),
-		   gl:vertex3f(X, Y, Z)
-	   end,
-    [Draw(P) || P <- Points],
+    [DrawFn(P) || P <- Points],
     gl:'end'().
 
 %% su: signed unit [-1.0 .. +1.0]
