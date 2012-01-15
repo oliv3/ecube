@@ -99,7 +99,7 @@ handle_call({size}, _From, #state{points=Points} = State) ->
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
 handle_cast({clear}, State) ->
-    {noreply, State#state{points=[]}};
+    {noreply, State#state{left= <<>>, points=[]}};
 handle_cast({format, Sign, WS, Order}, State) ->
     {noreply, State#state{sign=Sign, ws=WS, order=Order}};
 handle_cast({feed, Bin0}, #state{tup7=Tup7, ws=WS, delay=Delay,
