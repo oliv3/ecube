@@ -13,7 +13,7 @@
 -export([new/2]).
 
 %% module API
--export([gl/0, set_title/0]).
+-export([gl/0, set_title/0, size/0]).
 
 %% wx_object callbacks
 -export([init/1, handle_info/2, handle_event/2, terminate/2]).
@@ -24,7 +24,7 @@
 -define(QUIT,   ?wxID_EXIT).
 -define(ABOUT,  ?wxID_ABOUT).
 
--record(state, {frame, gl}).
+-record(state, {frame, gl, size}).
 
 -define(SERVER, ?MODULE).
 
@@ -37,7 +37,7 @@ init([Wx, Size]) ->
     process_flag(trap_exit, true),
     {Frame, GL} = wx:batch(fun() -> create_window(Wx, Size) end),
     ?D_REGISTER(?SERVER, self()),
-    {Frame, #state{frame=Frame, gl=GL}}.
+    {Frame, #state{frame=Frame, gl=GL, size=Size}}.
 
 
 create_window(Wx, Size) ->
@@ -86,6 +86,10 @@ handle_info({set_title, T}, State) ->
     wxTopLevelWindow:setTitle(State#state.frame, T),
     {noreply, State};
 
+handle_info({Pid, size}, #state{size=Size} = State) ->
+    Pid ! {size, Size},
+    {noreply, State};
+
 handle_info({'EXIT', _Pid, _Reason}, State) ->
     ?D_F("process ~p died: ~p, exiting", [_Pid, _Reason]),
     {stop, normal, State}.
@@ -131,3 +135,10 @@ title() ->
 
 set_title() ->
     ?SERVER ! {set_title, title()}.
+
+size() ->
+    ?SERVER ! {self(), size},
+    receive
+	{size, Size} ->
+	    Size
+    end.

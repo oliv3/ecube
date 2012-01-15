@@ -69,7 +69,8 @@ loop(Parent, Debug, #state{labels=undefined, msg_font=undefined} = State) ->
 				  ?wxFONTWEIGHT_NORMAL),
 	    {ok, MsgGLFixed} = wx_glfont:load_font(MsgFixed, []),
 
-	    NewState = State#state{texth=TextH, labels=Labels, msg_font=MsgGLFixed},
+	    NewState = State#state{texth=TextH, labels=Labels,
+				   msg_font=MsgGLFixed},
 	    Pid ! {Ref, osd(GL, NewState)},
 	    loop(Parent, Debug, NewState);
 	
@@ -125,7 +126,8 @@ osd(GL, State) ->
 
 osd(false, _GL, _State) ->
     ok;
-osd(true, GL, #state{texth=TextH, labels=Labels, msg=Msg, msg_font=MsgFont}) ->
+osd(true, GL, #state{texth=TextH, labels=Labels, msg=Msg,
+		     msg_font=MsgFont}) ->
     wxGLCanvas:setCurrent(GL),
 
     %% TODO: display (centered, yellow, big) OSD message
@@ -209,8 +211,13 @@ draw_labels([Opt|Opts], TextH, Dict) ->
 draw_msg(undefined, _Font) ->
     ok;
 draw_msg({_Ref, Msg}, Font) ->
-    %% TextH = float(wx_glfont:height(GLFixed)),
-    %% gl:translatef(0.0, -TextH, 0.0),
+    %% io:format("GLCanvas size: ~p~n", [ec_win:size()]),
+    {W, H} = ec_win:size(),
+    {MW, MH} = wx_glfont:text_size(Font, Msg),
+    %% io:format("Msg size: ~p ~p~n", [MW, MH]),
+    TX = (W bsr 1) - MW/2,
+    TY = (H bsr 1) - MH/2,
+    gl:translatef(TX, TY, 0.0),
     gl:color3ub(255, 255, 0),
     wx_glfont:render(Font, Msg).
 
