@@ -33,7 +33,7 @@
 -define(SERVER, ?MODULE).
 
 -record(state, {rec, %% recorder port
-		left = <<>>, %% binary left from previous run
+		left = 0, %% bytes to skip from previous run
 		dim = 3, %% 3|4
 		ws = 8, %% word size (multiple of 8 for now)
 		sign = unsigned,
@@ -99,22 +99,30 @@ handle_call({size}, _From, #state{points=Points} = State) ->
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
 handle_cast({clear}, State) ->
-    {noreply, State#state{left= <<>>, points=[]}};
+    {noreply, State#state{left=0, points=[]}};
 handle_cast({format, Sign, WS, Order}, State) ->
     {noreply, State#state{sign=Sign, ws=WS, order=Order}};
 handle_cast({feed, Bin0}, #state{tup7=Tup7, ws=WS, delay=Delay,
 				 order=Order, sign=Sign, left=L,
 				 points=Points} = State) ->
-    Bin = list_to_binary([L, Bin0]),
-    Type = {Sign, Order},
-    [Data, Left] = extract(WS, Bin, Type, Delay),
-    %% io:format("Data= ~p~nLeft= ~p~n", [Data, Left]),
-    {NewTup7, NewPoints} = add(Data, Tup7),
-    %% NewPoints = [],
-    {noreply, State#state{points=lists:flatten([Points,NewPoints]),
-			  left=Left, tup7=NewTup7}};
+    %% io:format("Feed ~p bytes~n", [size(Bin0)]),
+    {Left, Bin} = skip_first(L, Bin0),
+    %% io:format("skip_first ~p bytes of ~p -> ~p~n",
+    %% [L, size(Bin0), size(Bin)]),
+    case Left of
+	0 ->
+	    Type = {Sign, Order},
+	    [Data, Left2] = extract(WS, Bin, Type, Delay),
+	    %% io:format("1) Left2= ~p~n", [Left2]),
+	    {NewTup7, NewPoints} = add(Data, Tup7),
+	    {noreply, State#state{points=lists:flatten([Points,NewPoints]),
+				  left=Left2, tup7=NewTup7}};
+	Left ->
+	    %% io:format("2) Left= ~p~n", [Left]),
+	    {noreply, State#state{left=Left}}
+    end;
 handle_cast({delay, Delay}, State) ->
-    {noreply, State#state{delay=Delay}}.
+    {noreply, State#state{delay=Delay, left=0, points=[]}}.
 
 %%--------------------------------------------------------------------
 %% Function: handle_info(Info, State) -> {noreply, State} |
@@ -223,8 +231,10 @@ norm(X) ->
 
 extract(WS, Bin, Type, Delay) ->
     extract(WS, Bin, Type, Delay, []).
-extract(_WS, {left, Bin}, _Type, _Delay, Points) ->
-    [lists:reverse(Points), Bin];
+extract(_WS, <<>>, _Type, _Delay, Points) ->
+    [lists:reverse(Points), 0];
+extract(_WS, {left, Left}, _Type, _Delay, Points) ->
+    [lists:reverse(Points), Left];
 extract(WS, Bin, Type, Delay, Acc) ->
     <<Val:WS/bits, _Rest/binary>> = Bin,
     %% io:format("Val= ~p~n", [Val]),
@@ -236,18 +246,20 @@ extract(WS, Bin, Type, Delay, Acc) ->
 shift(WS, Delay, Bin) ->
     Bits = WS*Delay,
     if
-	size(Bin) >= Bits ->
+	(size(Bin)*8) >= Bits ->
 	    <<_Skip:Bits/bits, Rest/binary>> = Bin,
 	    Rest;
 	true ->
-	    {left, Bin}
+	    {left, size(Bin)}
     end.
 
 
 val(Val, WS, {signed, Order}) ->
     Max = umax(WS) bsr 1,
     Unsigned = binary:decode_unsigned(Val, Order),
-    (Unsigned - Max) / -Max;
+    Res = (Unsigned - Max) / Max,
+    true = is_su(Res),
+    Res;
 val(Val, WS, {unsigned, Order}) ->
     Max = umax(WS),
     Unsigned = binary:decode_unsigned(Val, Order),
@@ -287,3 +299,15 @@ filter(3, Points, _MaxT) ->
 filter(4, Points, MaxT) ->
     [P || P = {_X, _Y, _Z, T,
 	       _R, _G, _B} <- Points, T =< MaxT].
+
+skip_first(0, Bin) ->
+    {0, Bin};
+skip_first(Bytes, Bin) ->
+    S = size(Bin),
+    if
+	(S >= Bytes) ->
+	    <<_Skip:Bytes, Rest/binary>> = Bin,
+	    {0, Rest};
+	true ->
+	    {Bytes+S, null}
+    end.
